@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle } from "lucide-react"
 
 export function ContactSection() {
+  const router = useRouter()
   const [volume, setVolume] = useState("")
   const [hasBrand, setHasBrand] = useState("")
   const [showWarning, setShowWarning] = useState(false)
@@ -31,6 +33,11 @@ export function ContactSection() {
     }
   }
 
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    router.push("/gracias")
+  }
+
   return (
     <section id="contacto" className="section-padding-y container-padding-x bg-background">
       <div className="mx-auto max-w-3xl">
@@ -40,7 +47,7 @@ export function ContactSection() {
             Completá el formulario y nos pondremos en contacto a la brevedad.
           </p>
         </div>
-        <form className="space-y-6 rounded-2xl border bg-card p-8 shadow-lg">
+        <form onSubmit={onSubmit} className="space-y-6 rounded-2xl border bg-card p-8 shadow-lg">
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre y apellido *</Label>
