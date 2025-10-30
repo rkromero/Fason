@@ -6,14 +6,14 @@ interface LogoProps {
   className?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ width = 160, height = 160, className }) => {
+export const Logo: React.FC<LogoProps> = ({ width = 320, height = 320, className }) => {
   return (
     <Image
       src="/logo.png"
       alt="Compañía de Alfajores"
       width={width}
       height={height}
-      className={className ?? "h-10 w-auto md:h-12 lg:h-14"}
+      className={className ?? "h-20 w-auto md:h-24 lg:h-28"}
       priority
     />
   );
