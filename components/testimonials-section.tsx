@@ -131,7 +131,7 @@ export function TestimonialsSection() {
                   <div className="rounded-xl border bg-card p-6 shadow-sm">
                     <div className="mb-4 flex items-center gap-2">
                       <StarRating rating={testimonial.rating} />
-                      <div className="ml-auto text-gray-400">
+                      <div className="ml-auto">
                         <GoogleIcon />
                       </div>
                     </div>
