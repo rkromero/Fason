@@ -63,17 +63,31 @@ export function ContactSection() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="producto">Tipo de producto *</Label>
-            <Select>
-              <SelectTrigger id="producto">
-                <SelectValue placeholder="Seleccioná el tipo de producto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alfajores">Alfajores</SelectItem>
-                <SelectItem value="galletitas">Galletitas</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="producto">Tipo de producto *</Label>
+              <Select>
+                <SelectTrigger id="producto">
+                  <SelectValue placeholder="Seleccioná el tipo de producto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alfajores">Alfajores</SelectItem>
+                  <SelectItem value="galletitas">Galletitas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="marca">¿Tenés marca registrada o proyecto en marcha? *</Label>
+              <Select onValueChange={handleBrandChange}>
+                <SelectTrigger id="marca">
+                  <SelectValue placeholder="Seleccioná una opción" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="si">Sí</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
@@ -105,18 +119,7 @@ export function ContactSection() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="marca">¿Tenés marca registrada o proyecto en marcha? *</Label>
-            <Select onValueChange={handleBrandChange}>
-              <SelectTrigger id="marca">
-                <SelectValue placeholder="Seleccioná una opción" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="si">Sí</SelectItem>
-                <SelectItem value="no">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          
 
           {showWarning && (
             <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
