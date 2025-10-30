@@ -7,13 +7,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertCircle } from "lucide-react"
 
 export function ContactSection() {
   const router = useRouter()
   const [volume, setVolume] = useState("")
   const [hasBrand, setHasBrand] = useState("")
+  const [envasado, setEnvasado] = useState("")
   const [showWarning, setShowWarning] = useState(false)
+  const [showInvestmentModal, setShowInvestmentModal] = useState(false)
+  const [showAlternativeModal, setShowAlternativeModal] = useState(false)
 
   const handleVolumeChange = (value: string) => {
     setVolume(value)
@@ -33,10 +37,74 @@ export function ContactSection() {
     }
   }
 
+  // Cálculo de inversión estimada
+  const calculateInvestment = (tipoEnvasado: string): number => {
+    const costoInscripcion = 300000
+    const costoDiseño = 500000
+    let costoEnvasado = 0
+
+    switch (tipoEnvasado) {
+      case "flowpack-personalizado":
+        costoEnvasado = 4000000
+        break
+      case "flowpack-cristal":
+        costoEnvasado = 0
+        break
+      case "a-granel":
+        costoEnvasado = 1000000
+        break
+    }
+
+    return costoInscripcion + costoDiseño + costoEnvasado
+  }
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!envasado) {
+      return
+    }
+    setShowInvestmentModal(true)
+  }
+
+  const handleConfirmInvestment = () => {
+    setShowInvestmentModal(false)
     router.push("/gracias")
   }
+
+  const handleCancelInvestment = () => {
+    setShowInvestmentModal(false)
+    if (envasado === "flowpack-personalizado") {
+      setShowAlternativeModal(true)
+    }
+  }
+
+  const handleInvestmentModalChange = (open: boolean) => {
+    if (!open && envasado === "flowpack-personalizado") {
+      setShowAlternativeModal(true)
+    }
+    setShowInvestmentModal(open)
+  }
+
+  const handleAcceptAlternative = () => {
+    setEnvasado("flowpack-cristal")
+    setShowAlternativeModal(false)
+    setShowInvestmentModal(true)
+  }
+
+  const handleRejectAlternative = () => {
+    setShowAlternativeModal(false)
+  }
+
+  const investmentAmount = envasado ? calculateInvestment(envasado) : 0
 
   return (
     <section id="contacto" className="section-padding-y container-padding-x bg-background">
@@ -113,7 +181,7 @@ export function ContactSection() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="envasado">Tipo de envasado *</Label>
-              <Select>
+              <Select value={envasado} onValueChange={setEnvasado}>
                 <SelectTrigger id="envasado">
                   <SelectValue placeholder="Seleccioná el tipo de envasado" />
                 </SelectTrigger>
@@ -155,6 +223,53 @@ export function ContactSection() {
             servicios.
           </p>
         </form>
+
+        {/* Modal de inversión estimada */}
+        <Dialog open={showInvestmentModal} onOpenChange={handleInvestmentModalChange}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Inversión estimada</DialogTitle>
+              <DialogDescription className="pt-4 text-base">
+                La inversión estimada debido a la personalización y fabricación es de{" "}
+                <strong className="text-lg text-foreground">{formatCurrency(investmentAmount)}</strong>.
+              </DialogDescription>
+              <DialogDescription className="pt-2">
+                ¿Estás de acuerdo con esta inversión?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={handleCancelInvestment}>
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmInvestment}>
+                OK con esa inversión
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de alternativa Flowpack Cristal */}
+        <Dialog open={showAlternativeModal} onOpenChange={setShowAlternativeModal}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Alternativa más accesible</DialogTitle>
+              <DialogDescription className="pt-4 text-base">
+                Podés optar por Flowpack Cristal, que tiene una inversión más baja.
+              </DialogDescription>
+              <DialogDescription className="pt-2">
+                ¿Querés cambiar a Flowpack Cristal y continuar?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={handleRejectAlternative}>
+                No, gracias
+              </Button>
+              <Button onClick={handleAcceptAlternative}>
+                Sí, cambiar a Flowpack Cristal
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   )
