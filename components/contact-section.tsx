@@ -71,25 +71,38 @@ export function ContactSection() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="alfajores">Alfajores</SelectItem>
-                <SelectItem value="galletitas-dulces">Galletitas dulces</SelectItem>
-                <SelectItem value="galletitas-saladas">Galletitas saladas</SelectItem>
-                <SelectItem value="otro">Otro</SelectItem>
+                <SelectItem value="galletitas">Galletitas</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="volumen">Volumen estimado mensual *</Label>
-            <Select onValueChange={handleVolumeChange}>
-              <SelectTrigger id="volumen">
-                <SelectValue placeholder="Seleccioná el volumen estimado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="menos-1000">Menos de 1.000 unidades</SelectItem>
-                <SelectItem value="1000-5000">1.000 - 5.000 unidades</SelectItem>
-                <SelectItem value="mas-5000">Más de 5.000 unidades</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="volumen">Volumen estimado mensual *</Label>
+              <Select onValueChange={handleVolumeChange}>
+                <SelectTrigger id="volumen">
+                  <SelectValue placeholder="Seleccioná el volumen estimado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="menos-1000">Menos de 1.000 unidades</SelectItem>
+                  <SelectItem value="1000-5000">1.000 - 5.000 unidades</SelectItem>
+                  <SelectItem value="mas-5000">Más de 5.000 unidades</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="envasado">Tipo de envasado *</Label>
+              <Select>
+                <SelectTrigger id="envasado">
+                  <SelectValue placeholder="Seleccioná el tipo de envasado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="a-granel">A granel</SelectItem>
+                  <SelectItem value="flowpack-personalizado">Flow pack personalizado</SelectItem>
+                  <SelectItem value="flowpack-cristal">Flowpack cristal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
