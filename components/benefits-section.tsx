@@ -35,7 +35,7 @@ const benefits = [
 
 export function BenefitsSection() {
   return (
-    <section className="section-padding-y container-padding-x bg-background">
+    <section id="beneficios" className="section-padding-y container-padding-x bg-background">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
           <h2 className="heading-lg text-balance">¿Por qué elegirnos para fabricar tu marca?</h2>

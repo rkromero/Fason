@@ -33,7 +33,7 @@ const products = [
 
 export function ProductsSection() {
   return (
-    <section className="section-padding-y container-padding-x bg-background">
+    <section id="productos" className="section-padding-y container-padding-x bg-background">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
           <h2 className="heading-lg text-balance">Nuestros productos a fason</h2>

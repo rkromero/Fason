@@ -9,7 +9,7 @@ export function CTASection() {
   }
 
   return (
-    <section className="section-padding-y container-padding-x bg-gradient-to-br from-primary to-secondary">
+    <section id="cta" className="section-padding-y container-padding-x bg-gradient-to-br from-primary to-secondary">
       <div className="mx-auto max-w-4xl text-center">
         <h2 className="heading-lg mb-6 text-balance text-primary-foreground">
           Fabricá con nosotros. Calidad, cumplimiento y pasión por los alimentos.

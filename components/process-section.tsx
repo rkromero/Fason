@@ -23,7 +23,7 @@ const steps = [
 
 export function ProcessSection() {
   return (
-    <section className="section-padding-y container-padding-x bg-muted/30">
+    <section id="proceso" className="section-padding-y container-padding-x bg-muted/30">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
           <h2 className="heading-lg text-balance">Cómo trabajamos juntos</h2>

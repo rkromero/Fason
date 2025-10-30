@@ -25,7 +25,7 @@ const certifications = [
 
 export function CertificationsSection() {
   return (
-    <section className="section-padding-y container-padding-x bg-primary/5">
+    <section id="certificaciones" className="section-padding-y container-padding-x bg-primary/5">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
           <h2 className="heading-lg text-balance">Calidad y cumplimiento garantizados</h2>

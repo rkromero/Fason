@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/pro-blocks/logo"
 
 export function Navbar() {
-  const scrollToContact = () => {
-    document.getElementById("contacto")?.scrollIntoView({ behavior: "smooth" })
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
   return (
@@ -14,7 +14,24 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Logo className="h-12 w-auto md:h-16 lg:h-20" />
         </div>
-        <Button onClick={scrollToContact} size="lg">
+        <div className="hidden gap-6 md:flex">
+          <button onClick={() => scrollTo("beneficios")} className="text-sm text-foreground/80 hover:text-foreground">
+            Beneficios
+          </button>
+          <button onClick={() => scrollTo("productos")} className="text-sm text-foreground/80 hover:text-foreground">
+            Productos
+          </button>
+          <button onClick={() => scrollTo("proceso")} className="text-sm text-foreground/80 hover:text-foreground">
+            Proceso
+          </button>
+          <button onClick={() => scrollTo("certificaciones")} className="text-sm text-foreground/80 hover:text-foreground">
+            Certificaciones
+          </button>
+          <button onClick={() => scrollTo("contacto")} className="text-sm text-foreground/80 hover:text-foreground">
+            Contacto
+          </button>
+        </div>
+        <Button onClick={() => scrollTo("contacto")} size="lg">
           Solicitá tu cotización
         </Button>
       </div>
