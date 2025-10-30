@@ -35,7 +35,7 @@ export function ContactSection() {
     <section id="contacto" className="section-padding-y container-padding-x bg-background">
       <div className="mx-auto max-w-3xl">
         <div className="section-title-gap-lg mb-12 flex flex-col text-center">
-          <h2 className="heading-lg text-balance">Solicitá tu cotización</h2>
+          <h2 className="heading-lg text-balance">Calcular inversión y cotizar</h2>
           <p className="text-pretty text-lg text-muted-foreground">
             Completá el formulario y nos pondremos en contacto a la brevedad.
           </p>
