@@ -12,12 +12,19 @@ import { AlertCircle } from "lucide-react"
 
 export function ContactSection() {
   const router = useRouter()
+  const [nombre, setNombre] = useState("")
+  const [empresa, setEmpresa] = useState("")
+  const [email, setEmail] = useState("")
+  const [telefono, setTelefono] = useState("")
+  const [producto, setProducto] = useState("")
   const [volume, setVolume] = useState("")
   const [hasBrand, setHasBrand] = useState("")
   const [envasado, setEnvasado] = useState("")
+  const [mensaje, setMensaje] = useState("")
   const [showWarning, setShowWarning] = useState(false)
   const [showInvestmentModal, setShowInvestmentModal] = useState(false)
   const [showAlternativeModal, setShowAlternativeModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleVolumeChange = (value: string) => {
     setVolume(value)
@@ -75,9 +82,43 @@ export function ContactSection() {
     setShowInvestmentModal(true)
   }
 
-  const handleConfirmInvestment = () => {
+  const handleConfirmInvestment = async () => {
+    setIsSubmitting(true)
     setShowInvestmentModal(false)
-    router.push("/gracias")
+
+    try {
+      const investmentAmount = calculateInvestment(envasado)
+      const inversionEstimada = formatCurrency(investmentAmount)
+
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre,
+          empresa,
+          email,
+          telefono,
+          producto,
+          marca: hasBrand,
+          volumen: volume,
+          envasado,
+          mensaje,
+          inversionEstimada,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al enviar el formulario")
+      }
+
+      router.push("/gracias")
+    } catch (error) {
+      console.error("Error:", error)
+      alert("Hubo un error al enviar tu consulta. Por favor, intentá nuevamente.")
+      setIsSubmitting(false)
+    }
   }
 
   const handleCancelInvestment = () => {
@@ -119,29 +160,29 @@ export function ContactSection() {
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre y apellido *</Label>
-              <Input id="nombre" placeholder="Juan Pérez" required />
+              <Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Juan Pérez" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="empresa">Empresa o marca *</Label>
-              <Input id="empresa" placeholder="Mi Marca SRL" required />
+              <Input id="empresa" value={empresa} onChange={(e) => setEmpresa(e.target.value)} placeholder="Mi Marca SRL" required />
             </div>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="email">Email corporativo *</Label>
-              <Input id="email" type="email" placeholder="contacto@mimarca.com" required />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contacto@mimarca.com" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="telefono">Teléfono *</Label>
-              <Input id="telefono" type="tel" placeholder="+54 9 11 1234-5678" required />
+              <Input id="telefono" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="+54 9 11 1234-5678" required />
             </div>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="producto">Tipo de producto *</Label>
-              <Select>
+              <Select value={producto} onValueChange={setProducto}>
                 <SelectTrigger id="producto">
                   <SelectValue placeholder="Seleccioná el tipo de producto" />
                 </SelectTrigger>
@@ -211,11 +252,11 @@ export function ContactSection() {
 
           <div className="space-y-2">
             <Label htmlFor="mensaje">Mensaje (máx. 250 caracteres)</Label>
-            <Textarea id="mensaje" placeholder="Contanos brevemente sobre tu proyecto..." maxLength={250} rows={4} />
+            <Textarea id="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Contanos brevemente sobre tu proyecto..." maxLength={250} rows={4} />
           </div>
 
-          <Button type="submit" size="lg" className="w-full">
-            Enviar solicitud
+          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Enviando..." : "Enviar solicitud"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
@@ -241,8 +282,8 @@ export function ContactSection() {
               <Button variant="outline" onClick={handleCancelInvestment}>
                 Cancelar
               </Button>
-              <Button onClick={handleConfirmInvestment}>
-                OK con esa inversión
+              <Button onClick={handleConfirmInvestment} disabled={isSubmitting}>
+                {isSubmitting ? "Enviando..." : "OK con esa inversión"}
               </Button>
             </DialogFooter>
           </DialogContent>
