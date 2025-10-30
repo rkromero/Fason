@@ -49,7 +49,7 @@ const testimonials = [
   },
 ]
 
-const GoogleBusinessLink = "https://g.page/r/[TU_LINK_DE_GOOGLE_BUSINESS]" // Actualizar con el link real de Google Business
+const GoogleBusinessLink = "https://www.google.com/search?q=compania+de+alfajores&oq=compania+de+al&gs_lcrp=EgZjaHJvbWUqBggAEEUYOzIGCAAQRRg7MgYIARBFGDkyBggCEEUYPDIGCAMQRRg8MgYIBBBFGDwyBggFEEUYQdIBCDIxOTNqMGoxqAIAsAIA&sourceid=chrome&ie=UTF-8&sei=P_IDaaSuK6u85OUP1tje2Q4#lrd=0x67eda69e5efd41d9:0x1aceb5a7eb659601,1,,,,"
 
 function StarRating({ rating }: { rating: number }) {
   return (
