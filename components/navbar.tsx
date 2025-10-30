@@ -10,9 +10,9 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container-padding-x mx-auto flex h-16 max-w-7xl items-center justify-between">
+      <div className="container-padding-x mx-auto flex h-20 md:h-24 max-w-7xl items-center justify-between">
         <div className="flex items-center gap-2">
-          <Logo />
+          <Logo className="h-12 w-auto md:h-16 lg:h-20" />
         </div>
         <Button onClick={scrollToContact} size="lg">
           Solicitá tu cotización
