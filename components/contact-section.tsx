@@ -110,13 +110,15 @@ export function ContactSection() {
       })
 
       if (!response.ok) {
-        throw new Error("Error al enviar el formulario")
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
       }
 
       router.push("/gracias")
     } catch (error) {
-      console.error("Error:", error)
-      alert("Hubo un error al enviar tu consulta. Por favor, intentá nuevamente.")
+      console.error("Error al enviar formulario:", error)
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+      alert(`Hubo un error al enviar tu consulta: ${errorMessage}. Por favor, revisá la consola para más detalles e intentá nuevamente.`)
       setIsSubmitting(false)
     }
   }

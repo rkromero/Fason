@@ -5,6 +5,15 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: Request) {
   try {
+    // Validar que RESEND_API_KEY esté configurada
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY no está configurada')
+      return NextResponse.json(
+        { error: 'Error de configuración del servidor: RESEND_API_KEY no está configurada. Por favor, contactá al administrador.' },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const {
       nombre,
@@ -15,7 +24,7 @@ export async function POST(request: Request) {
       marca,
       volumen,
       envasado,
-      mensaje,
+      rally,
       inversionEstimada,
     } = body
 
@@ -146,9 +155,9 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      console.error('Error al enviar email:', error)
+      console.error('Error al enviar email con Resend:', error)
       return NextResponse.json(
-        { error: 'Error al enviar el email' },
+        { error: `Error al enviar el email: ${error instanceof Error ? error.message : 'Error desconocido de Resend'}` },
         { status: 500 }
       )
     }
@@ -159,8 +168,9 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error('Error en API contact:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: `Error interno del servidor: ${errorMessage}` },
       { status: 500 }
     )
   }
