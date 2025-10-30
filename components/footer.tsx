@@ -1,4 +1,5 @@
-import { Factory, Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin } from "lucide-react"
+import { Logo } from "@/components/pro-blocks/logo"
 
 export function Footer() {
   return (
@@ -7,8 +8,7 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Factory className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">FasonPro</span>
+              <Logo />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Fábrica argentina habilitada especializada en fabricación a fason de alfajores y galletitas.
