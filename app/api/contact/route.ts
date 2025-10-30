@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       marca,
       volumen,
       envasado,
-      rally,
+      mensaje,
       inversionEstimada,
     } = body
 
