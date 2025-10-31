@@ -40,14 +40,21 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     const { active, over } = event
     setActiveLead(null)
 
+    console.log('Drag ended:', { active: active.id, over: over?.id })
+
     if (!over) return
 
     const leadId = active.id as string
     const newStage = over.id as LeadStage
 
+    console.log('Updating lead:', { leadId, newStage })
+
     // Verificar que el stage sea válido
     const isValidStage = STAGES.some((stage) => stage.id === newStage)
-    if (!isValidStage) return
+    if (!isValidStage) {
+      console.log('Invalid stage:', newStage)
+      return
+    }
 
     onUpdateLead(leadId, { stage: newStage })
   }
@@ -67,11 +74,9 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
               stage={stage}
               leadCount={stageLeads.length}
             >
-              <div className="flex flex-col gap-3 p-3">
-                {stageLeads.map((lead) => (
-                  <LeadCard key={lead.id} lead={lead} />
-                ))}
-              </div>
+              {stageLeads.map((lead) => (
+                <LeadCard key={lead.id} lead={lead} />
+              ))}
             </KanbanColumn>
           )
         })}

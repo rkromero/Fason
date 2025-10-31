@@ -35,7 +35,9 @@ export function KanbanColumn({ stage, leadCount, children }: KanbanColumnProps) 
           </span>
         </div>
       </div>
-      <div className="max-h-[calc(100vh-250px)] overflow-y-auto">{children}</div>
+      <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
+        <div className="flex flex-col gap-3 p-3">{children}</div>
+      </div>
     </div>
   )
 }
