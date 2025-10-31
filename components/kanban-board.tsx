@@ -10,6 +10,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Lead, LeadStage, STAGES } from '@/lib/types/lead'
 import { KanbanColumn } from './kanban-column'
 import { LeadCard } from './lead-card'
@@ -70,15 +71,17 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
         {STAGES.map((stage) => {
           const stageLeads = leads.filter((lead) => lead.stage === stage.id)
           return (
-            <KanbanColumn
+            <SortableContext
               key={stage.id}
-              stage={stage}
-              leadCount={stageLeads.length}
+              items={stageLeads.map((lead) => lead.id)}
+              strategy={verticalListSortingStrategy}
             >
-              {stageLeads.map((lead) => (
-                <LeadCard key={lead.id} lead={lead} />
-              ))}
-            </KanbanColumn>
+              <KanbanColumn stage={stage} leadCount={stageLeads.length}>
+                {stageLeads.map((lead) => (
+                  <LeadCard key={lead.id} lead={lead} />
+                ))}
+              </KanbanColumn>
+            </SortableContext>
           )
         })}
       </div>
