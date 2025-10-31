@@ -36,7 +36,6 @@ export default function CRMPage() {
   }, [])
 
   const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
-    console.log('handleUpdateLead called:', { leadId, updates })
     try {
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
@@ -46,17 +45,13 @@ export default function CRMPage() {
         body: JSON.stringify(updates),
       })
 
-      console.log('Response status:', response.status)
-
       if (response.ok) {
         const data = await response.json()
-        console.log('Response data:', data)
         setLeads((prevLeads) =>
           prevLeads.map((lead) => (lead.id === leadId ? data.lead : lead))
         )
         toast.success('Lead actualizado correctamente')
       } else {
-        console.error('Response not OK')
         toast.error('Error al actualizar el lead')
       }
     } catch (error) {
