@@ -1,6 +1,6 @@
 "use client"
 
-import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Lead } from '@/lib/types/lead'
 import {
@@ -35,14 +35,12 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
     listeners,
     setNodeRef,
     transform,
-    transition,
-    isDragging: isSortableDragging,
-  } = useSortable({ id: lead.id })
+    isDragging: isDraggableDragging,
+  } = useDraggable({ id: lead.id })
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging || isDraggableDragging ? 0.5 : 1,
   }
 
   const getProductoLabel = (producto: string) => {
@@ -69,7 +67,7 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         style={style}
         className={cn(
           'cursor-grab active:cursor-grabbing',
-          (isDragging || isSortableDragging) && 'shadow-lg'
+          (isDragging || isDraggableDragging) && 'shadow-lg'
         )}
         {...attributes}
         {...listeners}
