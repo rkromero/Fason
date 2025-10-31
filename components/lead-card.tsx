@@ -73,7 +73,6 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         )}
         {...attributes}
         {...listeners}
-        onClick={() => setIsDialogOpen(true)}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
