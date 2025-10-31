@@ -18,6 +18,8 @@ export function KanbanColumn({ stage, leadCount, children }: KanbanColumnProps) 
     id: stage.id,
   })
 
+  console.log('KanbanColumn rendered:', { stageId: stage.id, isOver })
+
   return (
     <div
       ref={setNodeRef}

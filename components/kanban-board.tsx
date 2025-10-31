@@ -40,22 +40,33 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     const { active, over } = event
     setActiveLead(null)
 
-    console.log('Drag ended:', { active: active.id, over: over?.id })
+    console.log('Drag ended:', { 
+      active: active.id, 
+      over: over?.id,
+      overData: over?.data,
+      allStages: STAGES.map(s => s.id)
+    })
 
-    if (!over) return
+    if (!over) {
+      console.log('No over target')
+      return
+    }
 
     const leadId = active.id as string
     const newStage = over.id as LeadStage
 
-    console.log('Updating lead:', { leadId, newStage })
+    console.log('Extracted:', { leadId, newStage, type: typeof newStage })
 
     // Verificar que el stage sea válido
     const isValidStage = STAGES.some((stage) => stage.id === newStage)
+    console.log('Is valid stage?', isValidStage)
+    
     if (!isValidStage) {
       console.log('Invalid stage:', newStage)
       return
     }
 
+    console.log('Calling onUpdateLead with:', { leadId, stage: newStage })
     onUpdateLead(leadId, { stage: newStage })
   }
 
