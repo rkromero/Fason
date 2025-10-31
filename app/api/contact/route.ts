@@ -1,5 +1,7 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
+import { leadsStore } from '@/lib/data/leads-store'
+import { Lead } from '@/lib/types/lead'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -160,6 +162,32 @@ export async function POST(request: Request) {
         { error: `Error al enviar el email: ${error instanceof Error ? error.message : 'Error desconocido de Resend'}` },
         { status: 500 }
       )
+    }
+
+    // Crear lead automáticamente en el CRM
+    try {
+      const newLead: Lead = {
+        id: Date.now().toString(),
+        nombre,
+        empresa,
+        email,
+        telefono,
+        producto,
+        marca,
+        volumen,
+        envasado,
+        mensaje,
+        inversionEstimada,
+        stage: 'entrante',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        notes: [],
+      }
+      leadsStore.push(newLead)
+      console.log('Lead creado automáticamente en el CRM:', newLead.id)
+    } catch (leadError) {
+      console.error('Error al crear lead en el CRM:', leadError)
+      // No fallar el request si solo falla la creación del lead
     }
 
     return NextResponse.json(

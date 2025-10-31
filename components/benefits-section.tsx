@@ -8,8 +8,8 @@ const benefits = [
   },
   {
     icon: TrendingUp,
-    title: "Producción flexible",
-    description: "Desde lotes pequeños hasta 100 toneladas mensuales. Escalamos con tu crecimiento.",
+    title: "Producción para terceros flexible",
+    description: "Desde lotes pequeños hasta 100 toneladas mensuales. Escalamos con tu crecimiento en fason de productos.",
   },
   {
     icon: Users,
@@ -38,10 +38,9 @@ export function BenefitsSection() {
     <section id="beneficios" className="section-padding-y container-padding-x bg-background">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
-          <h2 className="heading-lg text-balance">¿Por qué elegirnos para fabricar tu marca?</h2>
+          <h2 className="heading-lg text-balance">¿Por qué elegirnos para fason de productos?</h2>
           <p className="text-pretty text-lg text-muted-foreground">
-            Combinamos experiencia, tecnología y compromiso para que tu producto llegue al mercado con la máxima
-            calidad.
+            Especialistas en <strong>producción para terceros</strong>, combinamos experiencia, tecnología y compromiso para que tu producto llegue al mercado con la máxima calidad.
           </p>
         </div>
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">

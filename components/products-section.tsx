@@ -36,9 +36,9 @@ export function ProductsSection() {
     <section id="productos" className="section-padding-y container-padding-x bg-background">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
-          <h2 className="heading-lg text-balance">Nuestros productos a fason</h2>
+          <h2 className="heading-lg text-balance">Producción para Terceros: Fason de Productos</h2>
           <p className="text-pretty text-lg text-muted-foreground">
-            Fabricamos una amplia variedad de productos con tu marca y receta.
+            Especialistas en <strong>fason de alfajores</strong>, <strong>fason de galletitas</strong> y <strong>producción para terceros</strong>. Fabricamos una amplia variedad de productos con tu marca y receta.
           </p>
         </div>
         <div className="grid gap-8 md:grid-cols-3">

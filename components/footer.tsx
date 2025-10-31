@@ -11,7 +11,7 @@ export function Footer() {
               <Logo />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Fábrica argentina habilitada especializada en fabricación a fason de alfajores y galletitas.
+              Fábrica argentina especializada en <strong>fason de alfajores</strong>, <strong>fason de galletitas</strong> y <strong>producción para terceros</strong>. RNE/RNPA habilitada.
             </p>
           </div>
 

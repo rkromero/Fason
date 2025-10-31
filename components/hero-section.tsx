@@ -20,10 +20,9 @@ export function HeroSection() {
               </span>
               Fábrica habilitada RNE y RNPA
             </div>
-            <h1 className="heading-xl text-balance">Fabricamos tu producto con tu marca</h1>
+            <h1 className="heading-xl text-balance">Fason de Alfajores y Galletitas | Producción para Terceros</h1>
             <p className="text-pretty text-lg text-muted-foreground leading-relaxed">
-              Somos una fábrica argentina con experiencia, calidad certificada y compromiso. Transformamos tu idea en
-              productos terminados listos para el mercado.
+              Somos una fábrica argentina especializada en <strong>fason de alfajores</strong>, <strong>fason de galletitas</strong> y <strong>producción para terceros</strong>. Calidad certificada RNE/RNPA y compromiso. Transformamos tu idea en productos terminados listos para el mercado.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button size="lg" onClick={scrollToContact} className="group">

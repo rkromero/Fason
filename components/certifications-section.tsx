@@ -28,9 +28,9 @@ export function CertificationsSection() {
     <section id="certificaciones" className="section-padding-y container-padding-x bg-primary/5">
       <div className="mx-auto max-w-7xl">
         <div className="section-title-gap-lg mx-auto mb-12 flex max-w-3xl flex-col text-center">
-          <h2 className="heading-lg text-balance">Calidad y cumplimiento garantizados</h2>
+          <h2 className="heading-lg text-balance">Calidad y cumplimiento para producción para terceros</h2>
           <p className="text-pretty text-lg text-muted-foreground">
-            Contamos con todas las habilitaciones y certificaciones necesarias para operar con los más altos estándares.
+            Para nuestro servicio de <strong>fason de productos</strong>, contamos con RNE/RNPA y todas las habilitaciones necesarias para operar con los más altos estándares.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

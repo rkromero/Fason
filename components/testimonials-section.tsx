@@ -20,13 +20,13 @@ const testimonials = [
   },
   {
     rating: 5,
-    text: "Nos fabricaron alfajores a medida con nuestro logo. Todo salió perfecto, súper recomendados.",
+    text: "Nos fabricaron alfajores a medida con nuestro logo en fason de productos. Todo salió perfecto, súper recomendados.",
     client: "María G., emprendedora",
     date: "julio 2024",
   },
   {
     rating: 5,
-    text: "El mejor servicio de fason que encontramos, seriedad y cumplimiento total.",
+    text: "El mejor servicio de producción para terceros que encontramos, seriedad y cumplimiento total en fason de alfajores.",
     client: "Dulce Sur",
     date: "agosto 2024",
   },

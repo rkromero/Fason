@@ -12,10 +12,10 @@ export function CTASection() {
     <section id="cta" className="section-padding-y container-padding-x bg-gradient-to-br from-primary to-secondary">
       <div className="mx-auto max-w-4xl text-center">
         <h2 className="heading-lg mb-6 text-balance text-primary-foreground">
-          Fabricá con nosotros. Calidad, cumplimiento y pasión por los alimentos.
+          Producí con nosotros: Fason de Alfajores y Galletitas
         </h2>
         <p className="mb-8 text-pretty text-lg text-primary-foreground/90 leading-relaxed">
-          Transformamos tu idea en un producto de calidad listo para conquistar el mercado. Empezá hoy mismo.
+          Especialistas en <strong>producción para terceros</strong>. Transformamos tu idea en un producto de calidad listo para conquistar el mercado. RNE/RNPA habilitada.
         </p>
         <Button size="lg" variant="secondary" onClick={scrollToContact} className="group">
           Comenzar ahora
