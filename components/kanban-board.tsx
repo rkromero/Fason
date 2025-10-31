@@ -71,17 +71,20 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
         {STAGES.map((stage) => {
           const stageLeads = leads.filter((lead) => lead.stage === stage.id)
           return (
-            <SortableContext
+            <KanbanColumn
               key={stage.id}
-              items={stageLeads.map((lead) => lead.id)}
-              strategy={verticalListSortingStrategy}
+              stage={stage}
+              leadCount={stageLeads.length}
             >
-              <KanbanColumn stage={stage} leadCount={stageLeads.length}>
+              <SortableContext
+                items={stageLeads.map((lead) => lead.id)}
+                strategy={verticalListSortingStrategy}
+              >
                 {stageLeads.map((lead) => (
                   <LeadCard key={lead.id} lead={lead} />
                 ))}
-              </KanbanColumn>
-            </SortableContext>
+              </SortableContext>
+            </KanbanColumn>
           )
         })}
       </div>
