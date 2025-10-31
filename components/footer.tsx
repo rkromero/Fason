@@ -30,7 +30,11 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>Sobre nosotros</li>
               <li>Certificaciones</li>
-              <li>Proceso de trabajo</li>
+              <li>
+                <a href="/politica-privacidad" className="hover:text-foreground transition-colors">
+                  Política de privacidad de datos
+                </a>
+              </li>
               <li>Contacto</li>
             </ul>
           </div>
