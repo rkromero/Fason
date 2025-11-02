@@ -27,7 +27,7 @@ const products = [
     icon: Layers,
     title: "Tapas y bases",
     items: ["Tapas para alfajores", "Bases de galletitas", "Obleas personalizadas", "Productos semi-elaborados"],
-    image: "/cookie-bases-and-wafers-for-alfajores-production.jpg",
+    image: "/cookie-bases-and-wafers-for-alfajores-production.png",
   },
 ]
 
