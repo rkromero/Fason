@@ -114,41 +114,47 @@ export default function CRMPage() {
             </div>
           </div>
 
-          {/* Estadísticas Material Design */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Leads</CardTitle>
-                <div className="bg-blue-100 rounded-full p-2">
-                  <Users className="h-5 w-5 text-blue-600" />
+          {/* Estadísticas Material Design - Mejoradas */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden">
+              <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-3 px-3 pt-4 sm:pt-5">
+                <div className="bg-blue-100 rounded-full p-2.5 sm:p-3 mb-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
+                <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
+                  Total Leads
+                </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="text-3xl font-medium text-gray-900">{stats.total}</div>
+              <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.total}</div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">Ganados</CardTitle>
-                <div className="bg-green-100 rounded-full p-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
+            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden">
+              <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-3 px-3 pt-4 sm:pt-5">
+                <div className="bg-green-100 rounded-full p-2.5 sm:p-3 mb-2">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                 </div>
+                <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
+                  Ganados
+                </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="text-3xl font-medium text-green-600">{stats.ganados}</div>
+              <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
+                <div className="text-2xl sm:text-3xl font-bold text-green-600">{stats.ganados}</div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">Tasa Conversión</CardTitle>
-                <div className="bg-purple-100 rounded-full p-2">
-                  <TrendingUp className="h-5 w-5 text-purple-600" />
+            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden">
+              <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-3 px-3 pt-4 sm:pt-5">
+                <div className="bg-purple-100 rounded-full p-2.5 sm:p-3 mb-2">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
+                <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
+                  Tasa Conversión
+                </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <div className="text-3xl font-medium text-purple-600">{conversionRate}%</div>
+              <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
+                <div className="text-2xl sm:text-3xl font-bold text-purple-600">{conversionRate}%</div>
               </CardContent>
             </Card>
           </div>

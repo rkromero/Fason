@@ -188,49 +188,84 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="relative">
-        {/* Navegación mobile - Botones y indicadores */}
-        <div className="md:hidden mb-4 flex items-center justify-between gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={goToPreviousStage}
-            className="h-10 w-10 shrink-0"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-
-          {/* Indicadores de columnas */}
-          <div className="flex-1 flex items-center justify-center gap-2 overflow-x-auto px-4">
+        {/* Navegación mobile - Botones y indicadores mejorados */}
+        <div className="md:hidden mb-4">
+          {/* Indicadores de columnas - Diseño tipo tabs mejorado */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 px-1 scrollbar-hide">
             {STAGES.map((stage, index) => {
               const stageLeads = leads.filter((lead) => lead.stage === stage.id)
+              const isActive = currentStageIndex === index
               return (
                 <button
                   key={stage.id}
                   onClick={() => goToStage(index)}
                   className={cn(
-                    'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all min-w-[80px]',
-                    currentStageIndex === index
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    'flex flex-col items-center justify-center gap-1.5 px-4 py-3 rounded-xl transition-all duration-200 min-w-[90px] relative',
+                    'border-2 shadow-sm',
+                    isActive
+                      ? 'bg-white border-blue-500 text-blue-700 shadow-md scale-105'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95'
                   )}
                 >
-                  <span className="text-xs font-medium truncate w-full text-center">
+                  {/* Indicador activo */}
+                  {isActive && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-500 rounded-b-full" />
+                  )}
+                  <span className={cn(
+                    'text-xs font-semibold truncate w-full text-center leading-tight',
+                    isActive ? 'text-blue-700' : 'text-gray-600'
+                  )}>
                     {stage.label}
                   </span>
-                  <span className="text-xs font-bold">{stageLeads.length}</span>
+                  <span className={cn(
+                    'text-sm font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center',
+                    isActive 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-gray-200 text-gray-700'
+                  )}>
+                    {stageLeads.length}
+                  </span>
                 </button>
               )
             })}
           </div>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={goToNextStage}
-            className="h-10 w-10 shrink-0"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+          
+          {/* Botones de navegación mejorados */}
+          <div className="flex items-center justify-center gap-3 mt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToPreviousStage}
+              className="h-9 px-4 rounded-lg border-gray-300 bg-white hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              <span className="text-sm font-medium">Anterior</span>
+            </Button>
+            
+            <div className="flex items-center gap-1.5">
+              {STAGES.map((_, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all duration-200',
+                    currentStageIndex === index
+                      ? 'w-6 bg-blue-500'
+                      : 'w-1.5 bg-gray-300'
+                  )}
+                />
+              ))}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToNextStage}
+              className="h-9 px-4 rounded-lg border-gray-300 bg-white hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
+            >
+              <span className="text-sm font-medium">Siguiente</span>
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
 
         {/* Contenedor de columnas */}
