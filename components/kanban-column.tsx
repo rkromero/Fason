@@ -22,7 +22,7 @@ export function KanbanColumn({ stage, leadCount, children }: KanbanColumnProps) 
     <div
       ref={setNodeRef}
       className={cn(
-        'min-w-[260px] sm:min-w-[280px] md:min-w-[300px] rounded-lg border-2 transition-colors shrink-0',
+        'w-full md:min-w-[280px] lg:min-w-[300px] rounded-lg border-2 transition-colors shrink-0',
         stage.color,
         isOver && 'ring-2 ring-offset-2'
       )}

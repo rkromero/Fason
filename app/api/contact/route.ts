@@ -1,7 +1,5 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
-import { leadsStore } from '@/lib/data/leads-store'
-import { Lead } from '@/lib/types/lead'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -166,8 +164,8 @@ export async function POST(request: Request) {
 
     // Crear lead automáticamente en el CRM
     try {
-      const newLead: Lead = {
-        id: Date.now().toString(),
+      const { createLead } = await import('@/lib/db/queries')
+      const newLead = await createLead({
         nombre,
         empresa,
         email,
@@ -179,11 +177,8 @@ export async function POST(request: Request) {
         mensaje,
         inversionEstimada,
         stage: 'entrante',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         notes: [],
-      }
-      leadsStore.push(newLead)
+      })
       console.log('Lead creado automáticamente en el CRM:', newLead.id)
     } catch (leadError) {
       console.error('Error al crear lead en el CRM:', leadError)

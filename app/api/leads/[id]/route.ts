@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { LeadStage } from '@/lib/types/lead'
-import { leadsStore } from '@/lib/data/leads-store'
+import { getLeadById, updateLead, deleteLead } from '@/lib/db/queries'
 
 // PUT - Actualizar un lead
 export async function PUT(
@@ -11,8 +11,9 @@ export async function PUT(
     const { id } = params
     const body = await request.json()
 
-    const leadIndex = leadsStore.findIndex((lead) => lead.id === id)
-    if (leadIndex === -1) {
+    // Verificar que el lead existe
+    const existingLead = await getLeadById(id)
+    if (!existingLead) {
       return NextResponse.json(
         { error: 'Lead no encontrado' },
         { status: 404 }
@@ -28,13 +29,16 @@ export async function PUT(
     }
 
     // Actualizar el lead
-    leadsStore[leadIndex] = {
-      ...leadsStore[leadIndex],
-      ...body,
-      updatedAt: new Date().toISOString(),
+    const updatedLead = await updateLead(id, body)
+    
+    if (!updatedLead) {
+      return NextResponse.json(
+        { error: 'Error al actualizar el lead' },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ lead: leadsStore[leadIndex] }, { status: 200 })
+    return NextResponse.json({ lead: updatedLead }, { status: 200 })
   } catch (error) {
     console.error('Error al actualizar lead:', error)
     return NextResponse.json(
@@ -52,15 +56,23 @@ export async function DELETE(
   try {
     const { id } = params
 
-    const leadIndex = leadsStore.findIndex((lead) => lead.id === id)
-    if (leadIndex === -1) {
+    // Verificar que el lead existe
+    const existingLead = await getLeadById(id)
+    if (!existingLead) {
       return NextResponse.json(
         { error: 'Lead no encontrado' },
         { status: 404 }
       )
     }
 
-    leadsStore.splice(leadIndex, 1)
+    const deleted = await deleteLead(id)
+    
+    if (!deleted) {
+      return NextResponse.json(
+        { error: 'Error al eliminar el lead' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {

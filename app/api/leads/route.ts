@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server'
 import { Lead } from '@/lib/types/lead'
-import { leadsStore } from '@/lib/data/leads-store'
+import { getAllLeads, createLead } from '@/lib/db/queries'
+import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
 // GET - Obtener todos los leads
 export async function GET() {
   try {
-    return NextResponse.json({ leads: leadsStore }, { status: 200 })
+    // Asegurar que la base de datos esté inicializada
+    await ensureDatabaseInitialized()
+    
+    const leads = await getAllLeads()
+    return NextResponse.json({ leads }, { status: 200 })
   } catch (error) {
     console.error('Error al obtener leads:', error)
     return NextResponse.json(
@@ -18,6 +23,9 @@ export async function GET() {
 // POST - Crear un nuevo lead
 export async function POST(request: Request) {
   try {
+    // Asegurar que la base de datos esté inicializada
+    await ensureDatabaseInitialized()
+    
     const body = await request.json()
     const {
       nombre,
@@ -40,8 +48,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const newLead: Lead = {
-      id: Date.now().toString(),
+    const newLead = await createLead({
       nombre,
       empresa,
       email,
@@ -53,12 +60,8 @@ export async function POST(request: Request) {
       mensaje,
       inversionEstimada,
       stage: 'entrante',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       notes: [],
-    }
-
-    leadsStore.push(newLead)
+    })
 
     return NextResponse.json({ lead: newLead }, { status: 201 })
   } catch (error) {
