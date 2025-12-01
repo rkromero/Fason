@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react'
 import { Lead } from '@/lib/types/lead'
 import { KanbanBoard } from '@/components/kanban-board'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, TrendingUp, Users } from 'lucide-react'
+import { RefreshCw, TrendingUp, Users, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { NewLeadDialog } from '@/components/new-lead-dialog'
 
 export default function CRMPage() {
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
+  const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
 
   const fetchLeads = async () => {
     try {
@@ -87,15 +89,26 @@ export default function CRMPage() {
                 Tablero Kanban para gestionar tus leads de ventas
               </p>
             </div>
-            <Button 
-              onClick={fetchLeads} 
-              variant="outline" 
-              size="sm"
-              className="w-full sm:w-auto shrink-0"
-            >
-              <RefreshCw className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Actualizar</span>
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button 
+                onClick={() => setIsNewLeadDialogOpen(true)} 
+                size="sm"
+                className="w-full sm:w-auto shrink-0"
+              >
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nuevo Lead</span>
+                <span className="sm:hidden">Nuevo</span>
+              </Button>
+              <Button 
+                onClick={fetchLeads} 
+                variant="outline" 
+                size="sm"
+                className="w-full sm:w-auto shrink-0"
+              >
+                <RefreshCw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Actualizar</span>
+              </Button>
+            </div>
           </div>
 
           {/* Estadísticas */}
@@ -137,6 +150,13 @@ export default function CRMPage() {
       <div className="w-full px-2 sm:px-4 py-4 sm:py-6 md:py-4 md:px-4 lg:px-6">
         <KanbanBoard leads={leads} onUpdateLead={handleUpdateLead} />
       </div>
+
+      {/* Dialog para nuevo lead */}
+      <NewLeadDialog
+        open={isNewLeadDialogOpen}
+        onOpenChange={setIsNewLeadDialogOpen}
+        onLeadCreated={fetchLeads}
+      />
     </div>
   )
 }
