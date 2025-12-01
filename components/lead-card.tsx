@@ -239,8 +239,8 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
       >
         <Card
           className={cn(
-            'cursor-pointer touch-manipulation select-none w-full relative',
-            (isDragging || isSortableDragging) && 'shadow-lg scale-105 opacity-50'
+            'cursor-pointer touch-manipulation select-none w-full relative bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-lg',
+            (isDragging || isSortableDragging) && 'shadow-xl scale-105 opacity-90 rotate-2'
           )}
           // onClick directo sin verificaciones complejas
           onClick={(e) => {
@@ -267,24 +267,24 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
           onTouchMove={isMobile ? handleTouchMove : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-        <CardHeader className="pb-2 sm:pb-2.5 md:pb-3 px-2.5 sm:px-3 md:px-4 pt-2.5 sm:pt-3 md:pt-4">
-          <div className="flex items-start justify-between gap-1.5 md:gap-2">
+        <CardHeader className="pb-3 px-4 pt-4">
+          <div className="flex items-start justify-between gap-2">
             {/* Handle de drag solo en desktop */}
             {!isMobile && (
               <div
                 data-drag-handle
-                className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-40 hover:opacity-60 transition-opacity"
+                className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-50 hover:opacity-70 transition-opacity"
                 {...attributes}
                 {...listeners}
                 onClick={(e) => e.stopPropagation()}
               >
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <GripVertical className="h-4 w-4 text-gray-400" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-xs sm:text-sm md:text-base font-semibold truncate">{lead.nombre}</CardTitle>
-              <CardDescription className="flex items-center gap-1 mt-1 text-xs">
-                <Building2 className="h-3 w-3 shrink-0" />
+              <CardTitle className="text-base font-medium text-gray-900 truncate">{lead.nombre}</CardTitle>
+              <CardDescription className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-600">
+                <Building2 className="h-4 w-4 shrink-0" />
                 <span className="truncate">{lead.empresa}</span>
               </CardDescription>
             </div>
@@ -293,9 +293,9 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 shrink-0 touch-manipulation"
+                  className="h-8 w-8 shrink-0 touch-manipulation hover:bg-gray-100 rounded-full"
                 >
-                  <MoreVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <MoreVertical className="h-5 w-5 text-gray-600" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -327,43 +327,43 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="space-y-1.5 sm:space-y-2 md:space-y-2.5 px-2.5 sm:px-3 md:px-4 pb-2.5 sm:pb-3 md:pb-4">
-          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
-            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-1.5 md:px-2 py-0.5">
+        <CardContent className="space-y-3 px-4 pb-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="secondary" className="text-xs px-2.5 py-1 bg-blue-100 text-blue-800 border-0 rounded-full font-medium">
               {getProductoLabel(lead.producto)}
             </Badge>
-            <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 md:px-2 py-0.5">
+            <Badge variant="outline" className="text-xs px-2.5 py-1 bg-gray-100 text-gray-700 border-0 rounded-full font-medium">
               {getVolumenLabel(lead.volumen)}
             </Badge>
           </div>
 
           {lead.inversionEstimada && (
-            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm text-muted-foreground">
-              <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-green-600 shrink-0" />
-              <span className="font-medium truncate">{lead.inversionEstimada}</span>
+            <div className="flex items-center gap-2 text-sm text-gray-700 bg-green-50 rounded-md px-3 py-2">
+              <DollarSign className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="font-semibold text-green-700">{lead.inversionEstimada}</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 text-[10px] sm:text-xs text-muted-foreground pt-0.5">
+          <div className="flex items-center gap-4 text-xs text-gray-600 pt-2 border-t border-gray-100">
             <a
               href={`mailto:${lead.email}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 hover:text-foreground transition-colors touch-manipulation min-h-[32px] sm:min-h-0"
+              className="flex items-center gap-1.5 hover:text-blue-600 transition-colors touch-manipulation min-h-[32px] sm:min-h-0 text-gray-600 hover:bg-blue-50 rounded-md px-2 py-1"
             >
-              <Mail className="h-3.5 w-3.5 sm:h-3 sm:w-3 shrink-0" />
-              <span className="hidden sm:inline">Email</span>
+              <Mail className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline font-medium">Email</span>
             </a>
             <a
               href={`tel:${lead.telefono}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 hover:text-foreground transition-colors touch-manipulation min-h-[32px] sm:min-h-0"
+              className="flex items-center gap-1.5 hover:text-green-600 transition-colors touch-manipulation min-h-[32px] sm:min-h-0 text-gray-600 hover:bg-green-50 rounded-md px-2 py-1"
             >
-              <Phone className="h-3.5 w-3.5 sm:h-3 sm:w-3 shrink-0" />
-              <span className="hidden sm:inline">Llamar</span>
+              <Phone className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline font-medium">Llamar</span>
             </a>
             <button
               onClick={handleWhatsAppClick}
-              className="flex items-center gap-1 hover:text-[#25D366] transition-colors touch-manipulation min-h-[32px] sm:min-h-0 text-muted-foreground"
+              className="flex items-center gap-1.5 hover:text-[#25D366] transition-colors touch-manipulation min-h-[32px] sm:min-h-0 text-gray-600 hover:bg-green-50 rounded-md px-2 py-1"
               title="Abrir WhatsApp"
             >
               <svg
@@ -379,7 +379,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
           </div>
 
           {lead.lastContact && (
-            <div className="text-xs text-muted-foreground pt-1">
+            <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
               Último contacto: {new Date(lead.lastContact).toLocaleDateString('es-AR')}
             </div>
           )}
