@@ -36,6 +36,8 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const clickStartTime = useRef<number | null>(null)
   const clickStartPos = useRef<{ x: number; y: number } | null>(null)
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const wasDraggingRef = useRef(false)
+  const mouseDownRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const {
     attributes,
     listeners,
@@ -70,9 +72,14 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         clickTimeoutRef.current = null
       }
       hasMovedRef.current = true
+      wasDraggingRef.current = true
     } else {
       // Resetear cuando termina el drag
       hasMovedRef.current = false
+      // Resetear después de un pequeño delay para permitir que el click se procese
+      setTimeout(() => {
+        wasDraggingRef.current = false
+      }, 100)
     }
   }, [isSortableDragging, isDragging])
 
@@ -110,12 +117,12 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
       return
     }
     
-    // Si estamos en drag, no hacer click
-    if (isSortableDragging || isDragging) {
+    // Si estamos en drag o acabamos de hacer drag, no hacer click
+    if (isSortableDragging || isDragging || wasDraggingRef.current) {
       return
     }
     
-    // Abrir modal directamente - el drag ya se activó si era necesario
+    // Abrir modal directamente
     e.preventDefault()
     e.stopPropagation()
     setIsDialogOpen(true)
@@ -243,23 +250,67 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         // Aplicar listeners de drag en desktop - estos deben tener prioridad absoluta
         // Los listeners incluyen onPointerDown, onPointerMove, etc. que manejan el drag
         {...(isMobile ? {} : { ...attributes, ...listeners })}
+        // Detectar clicks usando mouseDown y mouseUp para no interferir con drag
+        onMouseDown={(e) => {
+          // Solo capturar si no es un botón o enlace
+          const target = e.target as HTMLElement
+          if (
+            target.closest('button') ||
+            target.closest('a') ||
+            target.closest('[role="button"]')
+          ) {
+            return
+          }
+          
+          mouseDownRef.current = {
+            x: e.clientX,
+            y: e.clientY,
+            time: Date.now()
+          }
+        }}
+        onMouseUp={(e) => {
+          // Solo procesar si hay un mouseDown previo
+          if (!mouseDownRef.current) return
+          
+          // Verificar que el target no sea un botón o enlace
+          const target = e.target as HTMLElement
+          if (
+            target.closest('button') ||
+            target.closest('a') ||
+            target.closest('[role="button"]')
+          ) {
+            mouseDownRef.current = null
+            return
+          }
+          
+          // Si estamos en drag, no hacer click
+          if (isSortableDragging || isDragging || wasDraggingRef.current) {
+            mouseDownRef.current = null
+            return
+          }
+          
+          // Calcular distancia y tiempo
+          const distance = Math.sqrt(
+            Math.pow(e.clientX - mouseDownRef.current.x, 2) +
+            Math.pow(e.clientY - mouseDownRef.current.y, 2)
+          )
+          const timeDiff = Date.now() - mouseDownRef.current.time
+          
+          // Si fue un click rápido sin movimiento significativo, abrir modal
+          if (distance < 5 && timeDiff < 300) {
+            e.preventDefault()
+            e.stopPropagation()
+            setIsDialogOpen(true)
+          }
+          
+          mouseDownRef.current = null
+        }}
       >
         <Card
           className={cn(
-            'cursor-grab active:cursor-grabbing touch-manipulation select-none w-full',
+            'cursor-pointer touch-manipulation select-none w-full',
             (isDragging || isSortableDragging) && 'shadow-lg scale-105 opacity-50'
           )}
-          // onClick debe estar después de los listeners para no interferir
-          // Pero solo se ejecuta si no hay drag activo
-          onClick={(e) => {
-            // Si estamos en drag, no ejecutar click
-            if (isSortableDragging || isDragging) {
-              e.preventDefault()
-              e.stopPropagation()
-              return
-            }
-            handleCardClick(e)
-          }}
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchMove={isMobile ? handleTouchMove : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
