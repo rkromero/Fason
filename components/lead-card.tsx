@@ -248,38 +248,38 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         // Aplicar listeners de drag en desktop - estos deben tener prioridad absoluta
         // Los listeners incluyen onPointerDown, onPointerMove, etc. que manejan el drag
         {...(isMobile ? {} : { ...attributes, ...listeners })}
-        // onClick simple - los listeners de drag tienen prioridad
-        onClick={(e) => {
-          // Verificar que el target no sea un botón o enlace
-          const target = e.target as HTMLElement
-          if (
-            target.closest('button') ||
-            target.closest('a') ||
-            target.closest('[role="button"]')
-          ) {
-            return
-          }
-          
-          // Si estamos en drag, no hacer click
-          if (isSortableDragging || isDragging) {
-            return
-          }
-          
-          // Usar un pequeño delay para asegurar que el drag no se activó
-          clickTimeoutRef.current = setTimeout(() => {
-            // Verificar nuevamente si no hay drag activo
-            if (!isSortableDragging && !isDragging && !wasDraggingRef.current) {
-              setIsDialogOpen(true)
-            }
-            clickTimeoutRef.current = null
-          }, 100)
-        }}
       >
         <Card
           className={cn(
             'cursor-pointer touch-manipulation select-none w-full',
             (isDragging || isSortableDragging) && 'shadow-lg scale-105 opacity-50'
           )}
+          // onClick en el Card para que funcione correctamente
+          onClick={(e) => {
+            // Verificar que el target no sea un botón o enlace
+            const target = e.target as HTMLElement
+            if (
+              target.closest('button') ||
+              target.closest('a') ||
+              target.closest('[role="button"]')
+            ) {
+              return
+            }
+            
+            // Si estamos en drag, no hacer click
+            if (isSortableDragging || isDragging) {
+              return
+            }
+            
+            // Abrir modal directamente - usar un pequeño delay para asegurar que el drag no se activó
+            clickTimeoutRef.current = setTimeout(() => {
+              // Verificar nuevamente si no hay drag activo
+              if (!isSortableDragging && !isDragging && !wasDraggingRef.current) {
+                setIsDialogOpen(true)
+              }
+              clickTimeoutRef.current = null
+            }, 150)
+          }}
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchMove={isMobile ? handleTouchMove : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
