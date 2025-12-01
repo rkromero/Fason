@@ -31,6 +31,8 @@ interface LeadCardProps {
 export function LeadCard({ lead, isDragging }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const hasMovedRef = useRef(false)
+  const clickStartTime = useRef<number | null>(null)
+  const clickStartPos = useRef<{ x: number; y: number } | null>(null)
   const {
     attributes,
     listeners,
@@ -64,8 +66,7 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Solo abrir el modal si no es un drag y no hubo movimiento significativo
-    // Verificar que el target no sea un botón o enlace
+    // Verificar que el target no sea un botón, enlace o elemento interactivo
     const target = e.target as HTMLElement
     if (
       target.closest('button') ||
@@ -75,17 +76,34 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
       return
     }
     
-    if (!isSortableDragging && !isDragging && !hasMovedRef.current) {
+    // Verificar si fue un click rápido (no un drag)
+    const timeDiff = clickStartTime.current ? Date.now() - clickStartTime.current : 0
+    const posDiff = clickStartPos.current ? {
+      x: Math.abs(e.clientX - clickStartPos.current.x),
+      y: Math.abs(e.clientY - clickStartPos.current.y)
+    } : { x: 0, y: 0 }
+    
+    // Solo abrir si fue un click rápido y no hubo movimiento significativo
+    if (
+      !isSortableDragging && 
+      !isDragging && 
+      timeDiff < 300 && 
+      posDiff.x < 10 && 
+      posDiff.y < 10
+    ) {
+      e.preventDefault()
+      e.stopPropagation()
       setIsDialogOpen(true)
     }
-    // Resetear el flag después de un breve delay
-    setTimeout(() => {
-      hasMovedRef.current = false
-    }, 200)
+    
+    // Resetear
+    clickStartTime.current = null
+    clickStartPos.current = null
+    hasMovedRef.current = false
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // No resetear si se hace click en un botón o enlace
+    // No capturar si es un botón o enlace
     const target = e.target as HTMLElement
     if (
       target.closest('button') ||
@@ -94,11 +112,92 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
     ) {
       return
     }
+    
+    // Guardar posición y tiempo inicial
+    clickStartTime.current = Date.now()
+    clickStartPos.current = { x: e.clientX, y: e.clientY }
     hasMovedRef.current = false
   }
 
-  const handleMouseMove = () => {
-    hasMovedRef.current = true
+  const handleMouseMove = (e: React.MouseEvent) => {
+    // Si hay movimiento significativo, marcar como drag
+    if (clickStartPos.current) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - clickStartPos.current.x, 2) +
+        Math.pow(e.clientY - clickStartPos.current.y, 2)
+      )
+      if (distance > 5) {
+        hasMovedRef.current = true
+      }
+    }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]')
+    ) {
+      return
+    }
+    
+    const touch = e.touches[0]
+    clickStartTime.current = Date.now()
+    clickStartPos.current = { x: touch.clientX, y: touch.clientY }
+    hasMovedRef.current = false
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (clickStartPos.current && e.touches[0]) {
+      const touch = e.touches[0]
+      const distance = Math.sqrt(
+        Math.pow(touch.clientX - clickStartPos.current.x, 2) +
+        Math.pow(touch.clientY - clickStartPos.current.y, 2)
+      )
+      if (distance > 10) {
+        hasMovedRef.current = true
+      }
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]')
+    ) {
+      clickStartTime.current = null
+      clickStartPos.current = null
+      return
+    }
+    
+    // Si fue un tap (no drag), abrir el modal
+    const timeDiff = clickStartTime.current ? Date.now() - clickStartTime.current : 0
+    const touch = e.changedTouches[0]
+    const posDiff = clickStartPos.current ? {
+      x: Math.abs(touch.clientX - clickStartPos.current.x),
+      y: Math.abs(touch.clientY - clickStartPos.current.y)
+    } : { x: 0, y: 0 }
+    
+    if (
+      !hasMovedRef.current && 
+      !isSortableDragging && 
+      !isDragging && 
+      timeDiff < 500 && 
+      posDiff.x < 15 && 
+      posDiff.y < 15
+    ) {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDialogOpen(true)
+    }
+    
+    // Resetear
+    clickStartTime.current = null
+    clickStartPos.current = null
+    hasMovedRef.current = false
   }
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
@@ -116,12 +215,15 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          'cursor-pointer touch-manipulation',
+          'cursor-pointer touch-manipulation select-none',
           (isDragging || isSortableDragging) && 'shadow-lg scale-105'
         )}
         onClick={handleCardClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         {...attributes}
         {...listeners}
       >
