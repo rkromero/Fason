@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Mail, Phone, Building2, DollarSign, MoreVertical, MessageCircle } from 'lucide-react'
+import { Mail, Phone, Building2, DollarSign, MoreVertical, MessageCircle, GripVertical } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,8 +36,6 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const clickStartTime = useRef<number | null>(null)
   const clickStartPos = useRef<{ x: number; y: number } | null>(null)
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const wasDraggingRef = useRef(false)
-  const mouseDownRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const {
     attributes,
     listeners,
@@ -71,13 +69,6 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         clearTimeout(clickTimeoutRef.current)
         clickTimeoutRef.current = null
       }
-      hasMovedRef.current = true
-      wasDraggingRef.current = true
-    } else {
-      // Resetear cuando termina el drag
-      hasMovedRef.current = false
-      // Resetear inmediatamente cuando termina el drag
-      wasDraggingRef.current = false
     }
   }, [isSortableDragging, isDragging])
 
@@ -115,8 +106,8 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
       return
     }
     
-    // Si estamos en drag o acabamos de hacer drag, no hacer click
-    if (isSortableDragging || isDragging || wasDraggingRef.current) {
+    // Si estamos en drag, no hacer click
+    if (isSortableDragging || isDragging) {
       return
     }
     
@@ -245,23 +236,21 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         ref={setNodeRef}
         style={style}
         className="w-full"
-        // Aplicar listeners de drag en desktop - estos deben tener prioridad absoluta
-        // Los listeners incluyen onPointerDown, onPointerMove, etc. que manejan el drag
-        {...(isMobile ? {} : { ...attributes, ...listeners })}
       >
         <Card
           className={cn(
-            'cursor-pointer touch-manipulation select-none w-full',
+            'cursor-pointer touch-manipulation select-none w-full relative',
             (isDragging || isSortableDragging) && 'shadow-lg scale-105 opacity-50'
           )}
-          // onClick en el Card para que funcione correctamente
+          // onClick directo sin verificaciones complejas
           onClick={(e) => {
-            // Verificar que el target no sea un botón o enlace
+            // Verificar que el target no sea un botón, enlace, o el handle de drag
             const target = e.target as HTMLElement
             if (
               target.closest('button') ||
               target.closest('a') ||
-              target.closest('[role="button"]')
+              target.closest('[role="button"]') ||
+              target.closest('[data-drag-handle]')
             ) {
               return
             }
@@ -271,14 +260,8 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
               return
             }
             
-            // Abrir modal directamente - usar un pequeño delay para asegurar que el drag no se activó
-            clickTimeoutRef.current = setTimeout(() => {
-              // Verificar nuevamente si no hay drag activo
-              if (!isSortableDragging && !isDragging && !wasDraggingRef.current) {
-                setIsDialogOpen(true)
-              }
-              clickTimeoutRef.current = null
-            }, 150)
+            // Abrir modal directamente
+            setIsDialogOpen(true)
           }}
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchMove={isMobile ? handleTouchMove : undefined}
@@ -286,6 +269,18 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         >
         <CardHeader className="pb-2 sm:pb-2.5 md:pb-3 px-2.5 sm:px-3 md:px-4 pt-2.5 sm:pt-3 md:pt-4">
           <div className="flex items-start justify-between gap-1.5 md:gap-2">
+            {/* Handle de drag solo en desktop */}
+            {!isMobile && (
+              <div
+                data-drag-handle
+                className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-40 hover:opacity-60 transition-opacity"
+                {...attributes}
+                {...listeners}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <CardTitle className="text-xs sm:text-sm md:text-base font-semibold truncate">{lead.nombre}</CardTitle>
               <CardDescription className="flex items-center gap-1 mt-1 text-xs">
