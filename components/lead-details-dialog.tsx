@@ -103,6 +103,41 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
       setIsUpdating(false)
     }
   }
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return
+    
+    const updatedNotes = [...(lead.notes || []), newNote.trim()]
+    setIsUpdating(true)
+    
+    try {
+      if (onUpdateLead) {
+        await onUpdateLead(lead.id, { notes: updatedNotes })
+        toast.success('Nota agregada correctamente')
+        setNewNote('')
+      } else {
+        const response = await fetch(`/api/leads/${lead.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ notes: updatedNotes }),
+        })
+        
+        if (response.ok) {
+          toast.success('Nota agregada correctamente')
+          setNewNote('')
+        } else {
+          throw new Error('Error al agregar la nota')
+        }
+      }
+    } catch (error) {
+      console.error('Error al agregar nota:', error)
+      toast.error('Error al agregar la nota')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const handleWhatsAppClick = () => {
     // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, +, y otros caracteres)
     let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '')
@@ -169,12 +204,113 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
     }
   }
 
+  const handleSave = async () => {
+    setIsUpdating(true)
+    try {
+      if (onUpdateLead) {
+        await onUpdateLead(lead.id, editedLead)
+        toast.success('Lead actualizado correctamente')
+        setIsEditing(false)
+      } else {
+        const response = await fetch(`/api/leads/${lead.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(editedLead),
+        })
+        
+        if (response.ok) {
+          toast.success('Lead actualizado correctamente')
+          setIsEditing(false)
+        } else {
+          throw new Error('Error al actualizar el lead')
+        }
+      }
+    } catch (error) {
+      console.error('Error al actualizar lead:', error)
+      toast.error('Error al actualizar el lead')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{lead.nombre}</DialogTitle>
-          <DialogDescription>{lead.empresa}</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl">
+                {isEditing ? (
+                  <Input
+                    value={editedLead.nombre}
+                    onChange={(e) => setEditedLead({ ...editedLead, nombre: e.target.value })}
+                    className="text-2xl font-bold"
+                  />
+                ) : (
+                  lead.nombre
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                {isEditing ? (
+                  <Input
+                    value={editedLead.empresa}
+                    onChange={(e) => setEditedLead({ ...editedLead, empresa: e.target.value })}
+                    className="mt-1"
+                  />
+                ) : (
+                  lead.empresa
+                )}
+              </DialogDescription>
+            </div>
+            <div className="flex gap-2">
+              {isEditing ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false)
+                      setEditedLead({
+                        nombre: lead.nombre,
+                        empresa: lead.empresa,
+                        email: lead.email,
+                        telefono: lead.telefono,
+                        producto: lead.producto,
+                        marca: lead.marca,
+                        volumen: lead.volumen,
+                        envasado: lead.envasado,
+                        mensaje: lead.mensaje || '',
+                        inversionEstimada: lead.inversionEstimada || '',
+                      })
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isUpdating}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Guardar
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
