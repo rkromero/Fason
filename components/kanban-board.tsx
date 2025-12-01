@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -83,64 +83,81 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     setCurrentStageIndex(index)
   }
 
-  // Manejo de swipe gestures (solo en el contenedor, no en las tarjetas)
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Solo capturar si no es una tarjeta (evitar conflicto con drag and drop)
-    const target = e.target as HTMLElement
-    if (target.closest('[data-sortable-id]') || target.closest('button') || target.closest('a')) {
-      return
+  // Manejo de swipe gestures usando event listeners nativos (para poder usar passive: false)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Solo capturar si no es una tarjeta, botón o enlace
+      const target = e.target as HTMLElement
+      if (target.closest('[data-sortable-id]') || target.closest('button') || target.closest('a')) {
+        return
+      }
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
     }
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-  }
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return
-    
-    touchEndX.current = e.touches[0].clientX
-    touchEndY.current = e.touches[0].clientY
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return
+      
+      touchEndX.current = e.touches[0].clientX
+      touchEndY.current = e.touches[0].clientY
 
-    // Calcular la distancia horizontal y vertical
-    const deltaX = Math.abs(touchEndX.current - touchStartX.current)
-    const deltaY = Math.abs((touchEndY.current || 0) - touchStartY.current)
+      // Calcular la distancia horizontal y vertical
+      const deltaX = Math.abs(touchEndX.current - touchStartX.current)
+      const deltaY = Math.abs((touchEndY.current || 0) - touchStartY.current)
 
-    // Si el movimiento es principalmente horizontal, prevenir el scroll de la página
-    if (deltaX > deltaY && deltaX > 10) {
-      e.preventDefault()
+      // Si el movimiento es principalmente horizontal, prevenir el scroll de la página
+      if (deltaX > deltaY && deltaX > 10) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
     }
-  }
 
-  const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) {
+    const handleTouchEnd = () => {
+      if (!touchStartX.current || !touchEndX.current) {
+        touchStartX.current = null
+        touchEndX.current = null
+        touchStartY.current = null
+        touchEndY.current = null
+        return
+      }
+
+      const distance = touchStartX.current - touchEndX.current
+      const verticalDistance = touchStartY.current && touchEndY.current 
+        ? Math.abs(touchEndY.current - touchStartY.current) 
+        : 0
+      const minSwipeDistance = 50
+
+      // Solo procesar swipe si es principalmente horizontal
+      if (Math.abs(distance) > minSwipeDistance && Math.abs(distance) > verticalDistance) {
+        if (distance > 0) {
+          // Swipe izquierda - siguiente columna
+          goToNextStage()
+        } else {
+          // Swipe derecha - columna anterior
+          goToPreviousStage()
+        }
+      }
+
       touchStartX.current = null
       touchEndX.current = null
       touchStartY.current = null
       touchEndY.current = null
-      return
     }
 
-    const distance = touchStartX.current - touchEndX.current
-    const verticalDistance = touchStartY.current && touchEndY.current 
-      ? Math.abs(touchEndY.current - touchStartY.current) 
-      : 0
-    const minSwipeDistance = 50
+    // Agregar event listeners con passive: false para poder hacer preventDefault
+    container.addEventListener('touchstart', handleTouchStart, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    container.addEventListener('touchend', handleTouchEnd, { passive: true })
 
-    // Solo procesar swipe si es principalmente horizontal
-    if (Math.abs(distance) > minSwipeDistance && Math.abs(distance) > verticalDistance) {
-      if (distance > 0) {
-        // Swipe izquierda - siguiente columna
-        goToNextStage()
-      } else {
-        // Swipe derecha - columna anterior
-        goToPreviousStage()
-      }
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
     }
-
-    touchStartX.current = null
-    touchEndX.current = null
-    touchStartY.current = null
-    touchEndY.current = null
-  }
+  }, [goToNextStage, goToPreviousStage])
 
   return (
     <DndContext
