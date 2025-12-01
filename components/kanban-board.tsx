@@ -88,6 +88,8 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     const container = containerRef.current
     if (!container) return
 
+    let isHorizontalSwipe = false
+
     const handleTouchStart = (e: TouchEvent) => {
       // Solo capturar si no es una tarjeta, botón o enlace
       const target = e.target as HTMLElement
@@ -96,6 +98,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       }
       touchStartX.current = e.touches[0].clientX
       touchStartY.current = e.touches[0].clientY
+      isHorizontalSwipe = false
     }
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -109,18 +112,24 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       const deltaY = Math.abs((touchEndY.current || 0) - touchStartY.current)
 
       // Si el movimiento es principalmente horizontal, prevenir el scroll de la página
-      if (deltaX > deltaY && deltaX > 10) {
+      if (deltaX > deltaY && deltaX > 5) {
+        isHorizontalSwipe = true
         e.preventDefault()
         e.stopPropagation()
+        e.stopImmediatePropagation()
+      } else if (deltaY > deltaX && deltaY > 5) {
+        // Si es principalmente vertical, permitir scroll
+        isHorizontalSwipe = false
       }
     }
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e: TouchEvent) => {
       if (!touchStartX.current || !touchEndX.current) {
         touchStartX.current = null
         touchEndX.current = null
         touchStartY.current = null
         touchEndY.current = null
+        isHorizontalSwipe = false
         return
       }
 
@@ -128,10 +137,12 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       const verticalDistance = touchStartY.current && touchEndY.current 
         ? Math.abs(touchEndY.current - touchStartY.current) 
         : 0
-      const minSwipeDistance = 50
+      const minSwipeDistance = 30
 
       // Solo procesar swipe si es principalmente horizontal
-      if (Math.abs(distance) > minSwipeDistance && Math.abs(distance) > verticalDistance) {
+      if (isHorizontalSwipe && Math.abs(distance) > minSwipeDistance && Math.abs(distance) > verticalDistance) {
+        e.preventDefault()
+        e.stopPropagation()
         if (distance > 0) {
           // Swipe izquierda - siguiente columna
           goToNextStage()
@@ -145,17 +156,28 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       touchEndX.current = null
       touchStartY.current = null
       touchEndY.current = null
+      isHorizontalSwipe = false
     }
 
     // Agregar event listeners con passive: false para poder hacer preventDefault
     container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchmove', handleTouchMove, { passive: false })
-    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
+    container.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true })
+
+    // También prevenir scroll en el body cuando hay un swipe horizontal activo
+    const preventBodyScroll = (e: TouchEvent) => {
+      if (isHorizontalSwipe) {
+        e.preventDefault()
+      }
+    }
+
+    document.body.addEventListener('touchmove', preventBodyScroll, { passive: false })
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart)
       container.removeEventListener('touchmove', handleTouchMove)
       container.removeEventListener('touchend', handleTouchEnd)
+      document.body.removeEventListener('touchmove', preventBodyScroll)
     }
   }, [goToNextStage, goToPreviousStage])
 
@@ -215,10 +237,9 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
         <div
           ref={containerRef}
           className="relative"
-          style={{ touchAction: 'pan-y pinch-zoom' }}
         >
           {/* Vista mobile: una columna a la vez */}
-          <div className="md:hidden overflow-hidden" style={{ touchAction: 'pan-x' }}>
+          <div className="md:hidden overflow-hidden" style={{ touchAction: 'none' }}>
             <div
               className="flex transition-transform duration-300 ease-in-out"
               style={{
