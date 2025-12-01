@@ -211,8 +211,8 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
             </div>
           </div>
 
-          {/* Vista desktop: scroll horizontal */}
-          <div className="hidden md:flex gap-3 lg:gap-4 overflow-x-auto pb-4 -mx-4 px-4 scroll-smooth snap-x snap-mandatory">
+          {/* Vista desktop: todas las columnas visibles sin scroll */}
+          <div className="hidden md:grid md:grid-cols-6 gap-3 lg:gap-4 pb-4">
             {STAGES.map((stage) => {
               const stageLeads = leads.filter((lead) => lead.stage === stage.id)
               return (
