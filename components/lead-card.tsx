@@ -260,7 +260,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          'cursor-pointer touch-manipulation select-none',
+          'cursor-pointer touch-manipulation select-none w-full',
           (isDragging || isSortableDragging) && 'shadow-lg scale-105'
         )}
         onClick={handleCardClick}
@@ -273,11 +273,11 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         {...(!isMobile ? attributes : {})}
         {...(!isMobile ? listeners : {})}
       >
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-          <div className="flex items-start justify-between gap-2">
+        <CardHeader className="pb-2 sm:pb-2.5 md:pb-3 px-2.5 sm:px-3 md:px-4 pt-2.5 sm:pt-3 md:pt-4">
+          <div className="flex items-start justify-between gap-1.5 md:gap-2">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm sm:text-base font-semibold truncate">{lead.nombre}</CardTitle>
-              <CardDescription className="flex items-center gap-1 mt-1 text-xs sm:text-sm">
+              <CardTitle className="text-xs sm:text-sm md:text-base font-semibold truncate">{lead.nombre}</CardTitle>
+              <CardDescription className="flex items-center gap-1 mt-1 text-xs">
                 <Building2 className="h-3 w-3 shrink-0" />
                 <span className="truncate">{lead.empresa}</span>
               </CardDescription>
@@ -287,9 +287,9 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 touch-manipulation"
+                  className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 shrink-0 touch-manipulation"
                 >
-                  <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <MoreVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -321,24 +321,24 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <Badge variant="secondary" className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
+        <CardContent className="space-y-1.5 sm:space-y-2 md:space-y-2.5 px-2.5 sm:px-3 md:px-4 pb-2.5 sm:pb-3 md:pb-4">
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-1.5 md:px-2 py-0.5">
               {getProductoLabel(lead.producto)}
             </Badge>
-            <Badge variant="outline" className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
+            <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 md:px-2 py-0.5">
               {getVolumenLabel(lead.volumen)}
             </Badge>
           </div>
 
           {lead.inversionEstimada && (
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0" />
+            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm text-muted-foreground">
+              <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 text-green-600 shrink-0" />
               <span className="font-medium truncate">{lead.inversionEstimada}</span>
             </div>
           )}
 
-          <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground pt-1">
+          <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 text-[10px] sm:text-xs text-muted-foreground pt-0.5">
             <a
               href={`mailto:${lead.email}`}
               onClick={(e) => e.stopPropagation()}

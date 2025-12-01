@@ -212,7 +212,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
           </div>
 
           {/* Vista desktop: todas las columnas visibles sin scroll */}
-          <div className="hidden md:grid md:grid-cols-6 gap-3 lg:gap-4 pb-4">
+          <div className="hidden md:grid md:grid-cols-6 gap-2 lg:gap-3 xl:gap-4 h-[calc(100vh-280px)]">
             {STAGES.map((stage) => {
               const stageLeads = leads.filter((lead) => lead.stage === stage.id)
               return (
