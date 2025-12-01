@@ -26,9 +26,10 @@ import { LeadDetailsDialog } from './lead-details-dialog'
 interface LeadCardProps {
   lead: Lead
   isDragging?: boolean
+  onUpdateLead?: (leadId: string, updates: Partial<Lead>) => void
 }
 
-export function LeadCard({ lead, isDragging }: LeadCardProps) {
+export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const hasMovedRef = useRef(false)
@@ -218,11 +219,39 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis)
-    const cleanPhone = lead.telefono.replace(/[\s\-\(\)]/g, '')
+    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, +, y otros caracteres)
+    let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '')
+    
+    // Remover cualquier carácter que no sea número
+    cleanPhone = cleanPhone.replace(/\D/g, '')
+    
+    // Si el número está vacío después de limpiar, mostrar error
+    if (!cleanPhone || cleanPhone.length < 8) {
+      alert('Número de teléfono inválido')
+      return
+    }
+    
+    // Si empieza con 0, removerlo (código de país local)
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1)
+    }
+    
     // Si no empieza con código de país, asumir Argentina (54)
-    const phoneNumber = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`
-    window.open(`https://wa.me/${phoneNumber}`, '_blank')
+    // Verificar si ya tiene código de país (Argentina: 54, otros países tienen códigos de 1-3 dígitos)
+    if (!cleanPhone.startsWith('54') && !cleanPhone.match(/^[1-9]\d{1,2}/)) {
+      // Si tiene 10 dígitos o menos, asumir que es número argentino sin código de país
+      if (cleanPhone.length <= 10) {
+        cleanPhone = `54${cleanPhone}`
+      }
+    }
+    
+    // Validar que el número tenga al menos 10 dígitos (código de país + número)
+    if (cleanPhone.length < 10) {
+      alert('Número de teléfono inválido')
+      return
+    }
+    
+    window.open(`https://wa.me/${cleanPhone}`, '_blank')
   }
 
   return (
@@ -355,6 +384,7 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         lead={lead}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        onUpdateLead={onUpdateLead}
       />
     </>
   )

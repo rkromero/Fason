@@ -10,22 +10,103 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Mail, Phone, Building2, DollarSign, Calendar, MessageSquare } from 'lucide-react'
+import { Mail, Phone, Building2, DollarSign, Calendar, MessageSquare, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { LeadStage, STAGES } from '@/lib/types/lead'
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 interface LeadDetailsDialogProps {
   lead: Lead
   open: boolean
   onOpenChange: (open: boolean) => void
+  onUpdateLead?: (leadId: string, updates: Partial<Lead>) => void
 }
 
-export function LeadDetailsDialog({ lead, open, onOpenChange }: LeadDetailsDialogProps) {
+export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: LeadDetailsDialogProps) {
+  const [currentStage, setCurrentStage] = useState<LeadStage>(lead.stage)
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  // Actualizar el estado local cuando cambia el lead
+  useEffect(() => {
+    setCurrentStage(lead.stage)
+  }, [lead.stage])
+
+  const handleStageChange = async (newStage: LeadStage) => {
+    if (newStage === lead.stage) return
+    
+    setCurrentStage(newStage)
+    setIsUpdating(true)
+    
+    try {
+      if (onUpdateLead) {
+        await onUpdateLead(lead.id, { stage: newStage })
+        toast.success('Estado actualizado correctamente')
+      } else {
+        // Si no hay función de actualización, hacer la llamada directamente
+        const response = await fetch(`/api/leads/${lead.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ stage: newStage }),
+        })
+        
+        if (response.ok) {
+          toast.success('Estado actualizado correctamente')
+        } else {
+          throw new Error('Error al actualizar el estado')
+        }
+      }
+    } catch (error) {
+      console.error('Error al actualizar estado:', error)
+      toast.error('Error al actualizar el estado')
+      setCurrentStage(lead.stage) // Revertir el cambio
+    } finally {
+      setIsUpdating(false)
+    }
+  }
   const handleWhatsAppClick = () => {
-    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis)
-    const cleanPhone = lead.telefono.replace(/[\s\-\(\)]/g, '')
+    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, +, y otros caracteres)
+    let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '')
+    
+    // Remover cualquier carácter que no sea número
+    cleanPhone = cleanPhone.replace(/\D/g, '')
+    
+    // Si el número está vacío después de limpiar, mostrar error
+    if (!cleanPhone || cleanPhone.length < 8) {
+      alert('Número de teléfono inválido')
+      return
+    }
+    
+    // Si empieza con 0, removerlo (código de país local)
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1)
+    }
+    
     // Si no empieza con código de país, asumir Argentina (54)
-    const phoneNumber = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`
-    window.open(`https://wa.me/${phoneNumber}`, '_blank')
+    // Verificar si ya tiene código de país (Argentina: 54, otros países tienen códigos de 1-3 dígitos)
+    if (!cleanPhone.startsWith('54') && !cleanPhone.match(/^[1-9]\d{1,2}/)) {
+      // Si tiene 10 dígitos o menos, asumir que es número argentino sin código de país
+      if (cleanPhone.length <= 10) {
+        cleanPhone = `54${cleanPhone}`
+      }
+    }
+    
+    // Validar que el número tenga al menos 10 dígitos (código de país + número)
+    if (cleanPhone.length < 10) {
+      alert('Número de teléfono inválido')
+      return
+    }
+    
+    window.open(`https://wa.me/${cleanPhone}`, '_blank')
   }
 
   const getProductoLabel = (producto: string) => {
@@ -67,6 +148,40 @@ export function LeadDetailsDialog({ lead, open, onOpenChange }: LeadDetailsDialo
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Estado del Lead */}
+          <div>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Estado del Lead
+            </h3>
+            <div className="pl-6">
+              <Select
+                value={currentStage}
+                onValueChange={handleStageChange}
+                disabled={isUpdating}
+              >
+                <SelectTrigger className="w-full sm:w-[250px]">
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STAGES.map((stage) => {
+                    // Extraer el color de fondo de la clase Tailwind
+                    const bgColor = stage.color.split(' ')[0]
+                    return (
+                      <SelectItem key={stage.id} value={stage.id}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${bgColor}`} />
+                          {stage.label}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator />
           {/* Información de contacto */}
           <div>
             <h3 className="font-semibold mb-3 flex items-center gap-2">

@@ -201,7 +201,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
                         strategy={verticalListSortingStrategy}
                       >
                         {stageLeads.map((lead) => (
-                          <LeadCard key={lead.id} lead={lead} />
+                          <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
                         ))}
                       </SortableContext>
                     </KanbanColumn>
@@ -226,7 +226,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
                     strategy={verticalListSortingStrategy}
                   >
                     {stageLeads.map((lead) => (
-                      <LeadCard key={lead.id} lead={lead} />
+                      <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
                     ))}
                   </SortableContext>
                 </KanbanColumn>
