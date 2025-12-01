@@ -71,13 +71,13 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
   }
 
   // Navegación entre columnas
-  const goToNextStage = () => {
+  const goToNextStage = useCallback(() => {
     setCurrentStageIndex((prev) => (prev + 1) % STAGES.length)
-  }
+  }, [])
 
-  const goToPreviousStage = () => {
+  const goToPreviousStage = useCallback(() => {
     setCurrentStageIndex((prev) => (prev - 1 + STAGES.length) % STAGES.length)
-  }
+  }, [])
 
   const goToStage = (index: number) => {
     setCurrentStageIndex(index)
@@ -214,14 +214,11 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
         {/* Contenedor de columnas */}
         <div
           ref={containerRef}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          className="relative touch-pan-y"
-          style={{ touchAction: 'pan-y' }}
+          className="relative"
+          style={{ touchAction: 'pan-y pinch-zoom' }}
         >
           {/* Vista mobile: una columna a la vez */}
-          <div className="md:hidden overflow-hidden">
+          <div className="md:hidden overflow-hidden" style={{ touchAction: 'pan-x' }}>
             <div
               className="flex transition-transform duration-300 ease-in-out"
               style={{
