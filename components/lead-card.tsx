@@ -68,25 +68,29 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         ref={setNodeRef}
         style={style}
         className={cn(
-          'cursor-grab active:cursor-grabbing',
-          (isDragging || isSortableDragging) && 'shadow-lg'
+          'cursor-grab active:cursor-grabbing touch-manipulation',
+          (isDragging || isSortableDragging) && 'shadow-lg scale-105'
         )}
         {...attributes}
         {...listeners}
       >
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <CardTitle className="text-base">{lead.nombre}</CardTitle>
-              <CardDescription className="flex items-center gap-1 mt-1">
-                <Building2 className="h-3 w-3" />
-                {lead.empresa}
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-sm sm:text-base font-semibold truncate">{lead.nombre}</CardTitle>
+              <CardDescription className="flex items-center gap-1 mt-1 text-xs sm:text-sm">
+                <Building2 className="h-3 w-3 shrink-0" />
+                <span className="truncate">{lead.empresa}</span>
               </CardDescription>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 touch-manipulation"
+                >
+                  <MoreVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -118,40 +122,44 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">{getProductoLabel(lead.producto)}</Badge>
-            <Badge variant="outline">{getVolumenLabel(lead.volumen)}</Badge>
+        <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <Badge variant="secondary" className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
+              {getProductoLabel(lead.producto)}
+            </Badge>
+            <Badge variant="outline" className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
+              {getVolumenLabel(lead.volumen)}
+            </Badge>
           </div>
 
           {lead.inversionEstimada && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              <span className="font-medium">{lead.inversionEstimada}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0" />
+              <span className="font-medium truncate">{lead.inversionEstimada}</span>
             </div>
           )}
 
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground pt-1">
             <a
               href={`mailto:${lead.email}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              className="flex items-center gap-1 hover:text-foreground transition-colors touch-manipulation min-h-[32px] sm:min-h-0"
             >
-              <Mail className="h-3 w-3" />
-              Email
+              <Mail className="h-3.5 w-3.5 sm:h-3 sm:w-3 shrink-0" />
+              <span className="hidden sm:inline">Email</span>
             </a>
             <a
               href={`tel:${lead.telefono}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              className="flex items-center gap-1 hover:text-foreground transition-colors touch-manipulation min-h-[32px] sm:min-h-0"
             >
-              <Phone className="h-3 w-3" />
-              Llamar
+              <Phone className="h-3.5 w-3.5 sm:h-3 sm:w-3 shrink-0" />
+              <span className="hidden sm:inline">Llamar</span>
             </a>
           </div>
 
           {lead.lastContact && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground pt-1">
               Último contacto: {new Date(lead.lastContact).toLocaleDateString('es-AR')}
             </div>
           )}

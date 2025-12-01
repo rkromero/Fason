@@ -78,50 +78,55 @@ export default function CRMPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="border-b bg-background">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold">CRM - Gestión de Leads</h1>
-              <p className="text-muted-foreground mt-1">
+      <div className="border-b bg-background sticky top-0 z-10 shadow-sm">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">CRM - Gestión de Leads</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Tablero Kanban para gestionar tus leads de ventas
               </p>
             </div>
-            <Button onClick={fetchLeads} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Actualizar
+            <Button 
+              onClick={fetchLeads} 
+              variant="outline" 
+              size="sm"
+              className="w-full sm:w-auto shrink-0"
+            >
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Actualizar</span>
             </Button>
           </div>
 
           {/* Estadísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+            <Card className="border shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Total Leads</CardTitle>
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0 ml-1" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">{stats.total}</div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ganados</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
+            <Card className="border shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Ganados</CardTitle>
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 shrink-0 ml-1" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.ganados}</div>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">{stats.ganados}</div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tasa Conversión</CardTitle>
-                <TrendingUp className="h-4 w-4 text-blue-600" />
+            <Card className="border shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Tasa Conversión</CardTitle>
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0 ml-1" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{conversionRate}%</div>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">{conversionRate}%</div>
               </CardContent>
             </Card>
           </div>
@@ -129,7 +134,7 @@ export default function CRMPage() {
       </div>
 
       {/* Tablero Kanban */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 md:py-8">
         <KanbanBoard leads={leads} onUpdateLead={handleUpdateLead} />
       </div>
     </div>

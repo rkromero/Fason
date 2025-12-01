@@ -67,7 +67,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-4 -mx-2 sm:-mx-4 px-2 sm:px-4 scroll-smooth snap-x snap-mandatory">
         {STAGES.map((stage) => {
           const stageLeads = leads.filter((lead) => lead.stage === stage.id)
           return (

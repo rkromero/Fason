@@ -22,21 +22,21 @@ export function KanbanColumn({ stage, leadCount, children }: KanbanColumnProps) 
     <div
       ref={setNodeRef}
       className={cn(
-        'min-w-[300px] rounded-lg border-2 transition-colors',
+        'min-w-[260px] sm:min-w-[280px] md:min-w-[300px] rounded-lg border-2 transition-colors shrink-0',
         stage.color,
         isOver && 'ring-2 ring-offset-2'
       )}
     >
-      <div className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">{stage.label}</h3>
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-current/20 text-sm font-medium">
+      <div className="border-b p-2.5 sm:p-3 md:p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold text-sm sm:text-base truncate">{stage.label}</h3>
+          <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-current/20 text-xs sm:text-sm font-medium shrink-0">
             {leadCount}
           </span>
         </div>
       </div>
-      <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
-        <div className="flex flex-col gap-3 p-3">{children}</div>
+      <div className="max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-250px)] overflow-y-auto overscroll-contain">
+        <div className="flex flex-col gap-2 sm:gap-3 p-2 sm:p-3">{children}</div>
       </div>
     </div>
   )
