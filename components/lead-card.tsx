@@ -245,21 +245,34 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
 
   return (
     <>
-      <Card
+      <div
         ref={setNodeRef}
         style={style}
-        className={cn(
-          'cursor-pointer touch-manipulation select-none w-full',
-          (isDragging || isSortableDragging) && 'shadow-lg scale-105'
-        )}
+        className="w-full"
         // Aplicar listeners de drag en desktop - estos deben tener prioridad absoluta
+        // Los listeners incluyen onPointerDown, onPointerMove, etc. que manejan el drag
         {...(isMobile ? {} : { ...attributes, ...listeners })}
-        // onClick solo se ejecuta si no hay drag activo (los listeners de drag tienen prioridad)
-        onClick={handleCardClick}
-        onTouchStart={isMobile ? handleTouchStart : undefined}
-        onTouchMove={isMobile ? handleTouchMove : undefined}
-        onTouchEnd={isMobile ? handleTouchEnd : undefined}
       >
+        <Card
+          className={cn(
+            'cursor-grab active:cursor-grabbing touch-manipulation select-none w-full',
+            (isDragging || isSortableDragging) && 'shadow-lg scale-105 opacity-50'
+          )}
+          // onClick debe estar después de los listeners para no interferir
+          // Pero solo se ejecuta si no hay drag activo
+          onClick={(e) => {
+            // Si estamos en drag, no ejecutar click
+            if (isSortableDragging || isDragging) {
+              e.preventDefault()
+              e.stopPropagation()
+              return
+            }
+            handleCardClick(e)
+          }}
+          onTouchStart={isMobile ? handleTouchStart : undefined}
+          onTouchMove={isMobile ? handleTouchMove : undefined}
+          onTouchEnd={isMobile ? handleTouchEnd : undefined}
+        >
         <CardHeader className="pb-2 sm:pb-2.5 md:pb-3 px-2.5 sm:px-3 md:px-4 pt-2.5 sm:pt-3 md:pt-4">
           <div className="flex items-start justify-between gap-1.5 md:gap-2">
             <div className="flex-1 min-w-0">
@@ -366,6 +379,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
           )}
         </CardContent>
       </Card>
+      </div>
 
       <LeadDetailsDialog
         lead={lead}
