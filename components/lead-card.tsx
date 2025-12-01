@@ -267,24 +267,24 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
           onTouchMove={isMobile ? handleTouchMove : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-        <CardHeader className="pb-3 px-4 pt-4">
+        <CardHeader className="pb-2 px-3 pt-3">
           <div className="flex items-start justify-between gap-2">
             {/* Handle de drag solo en desktop */}
             {!isMobile && (
               <div
                 data-drag-handle
-                className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-50 hover:opacity-70 transition-opacity"
+                className="cursor-grab active:cursor-grabbing touch-none mr-0.5 opacity-50 hover:opacity-70 transition-opacity"
                 {...attributes}
                 {...listeners}
                 onClick={(e) => e.stopPropagation()}
               >
-                <GripVertical className="h-4 w-4 text-gray-400" />
+                <GripVertical className="h-3.5 w-3.5 text-gray-400" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-medium text-gray-900 truncate">{lead.nombre}</CardTitle>
-              <CardDescription className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-600">
-                <Building2 className="h-4 w-4 shrink-0" />
+              <CardTitle className="text-sm font-medium text-gray-900 truncate leading-tight">{lead.nombre}</CardTitle>
+              <CardDescription className="flex items-center gap-1 mt-1 text-xs text-gray-600">
+                <Building2 className="h-3 w-3 shrink-0" />
                 <span className="truncate">{lead.empresa}</span>
               </CardDescription>
             </div>
@@ -293,9 +293,9 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 shrink-0 touch-manipulation hover:bg-gray-100 rounded-full"
+                  className="h-7 w-7 shrink-0 touch-manipulation hover:bg-gray-100 rounded-full"
                 >
-                  <MoreVertical className="h-5 w-5 text-gray-600" />
+                  <MoreVertical className="h-4 w-4 text-gray-600" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -327,24 +327,24 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 px-4 pb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary" className="text-xs px-2.5 py-1 bg-blue-100 text-blue-800 border-0 rounded-full font-medium">
+        <CardContent className="space-y-2 px-3 pb-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border-0 rounded-full font-medium">
               {getProductoLabel(lead.producto)}
             </Badge>
-            <Badge variant="outline" className="text-xs px-2.5 py-1 bg-gray-100 text-gray-700 border-0 rounded-full font-medium">
+            <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 border-0 rounded-full font-medium">
               {getVolumenLabel(lead.volumen)}
             </Badge>
           </div>
 
           {lead.inversionEstimada && (
-            <div className="flex items-center gap-2 text-sm text-gray-700 bg-green-50 rounded-md px-3 py-2">
-              <DollarSign className="h-4 w-4 text-green-600 shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-gray-700 bg-green-50 rounded px-2 py-1">
+              <DollarSign className="h-3 w-3 text-green-600 shrink-0" />
               <span className="font-semibold text-green-700">{lead.inversionEstimada}</span>
             </div>
           )}
 
-          <div className="flex items-center gap-4 text-xs text-gray-600 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-3 text-[10px] text-gray-600 pt-1.5 border-t border-gray-100">
             <a
               href={`mailto:${lead.email}`}
               onClick={(e) => e.stopPropagation()}
