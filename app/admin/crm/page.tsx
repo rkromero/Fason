@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { NewLeadDialog } from '@/components/new-lead-dialog'
+import { CRMSidebar } from '@/components/crm-sidebar'
 
 export default function CRMPage() {
   const router = useRouter()
@@ -79,19 +80,24 @@ export default function CRMPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Material Design */}
-      <div className="bg-white sticky top-0 z-10 shadow-md border-b border-gray-200">
-        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-gray-900 truncate">
-                CRM - Gestión de Leads
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-2">
-                Tablero Kanban para gestionar tus leads de ventas
-              </p>
-            </div>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar - Solo visible en desktop */}
+      <CRMSidebar />
+
+      {/* Main Content */}
+      <div className="flex-1 md:ml-64">
+        {/* Header Material Design */}
+        <div className="bg-white sticky top-0 z-10 shadow-md border-b border-gray-200">
+          <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-gray-900 truncate">
+                  LEADS
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-2">
+                  Tablero Kanban para gestionar tus leads de ventas
+                </p>
+              </div>
             <div className="flex gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => setIsNewLeadDialogOpen(true)} 
@@ -161,17 +167,18 @@ export default function CRMPage() {
         </div>
       </div>
 
-      {/* Tablero Kanban */}
-      <div className="w-full px-4 sm:px-6 py-6 sm:py-8">
-        <KanbanBoard leads={leads} onUpdateLead={handleUpdateLead} />
-      </div>
+        {/* Tablero Kanban */}
+        <div className="w-full px-4 sm:px-6 py-6 sm:py-8">
+          <KanbanBoard leads={leads} onUpdateLead={handleUpdateLead} />
+        </div>
 
-      {/* Dialog para nuevo lead */}
-      <NewLeadDialog
-        open={isNewLeadDialogOpen}
-        onOpenChange={setIsNewLeadDialogOpen}
-        onLeadCreated={fetchLeads}
-      />
+        {/* Dialog para nuevo lead */}
+        <NewLeadDialog
+          open={isNewLeadDialogOpen}
+          onOpenChange={setIsNewLeadDialogOpen}
+          onLeadCreated={fetchLeads}
+        />
+      </div>
     </div>
   )
 }
