@@ -33,7 +33,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Distancia para activar drag (funciona bien en desktop)
+        distance: 5, // Distancia mínima para activar drag (más sensible)
       },
     })
   )
