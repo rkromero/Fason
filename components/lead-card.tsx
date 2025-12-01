@@ -115,19 +115,10 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
       return
     }
     
-    // En desktop, usar un delay para asegurar que no fue un drag
-    // El drag and drop se activa primero, así que si llegamos aquí es un click real
-    if (!isMobile) {
-      e.preventDefault()
-      e.stopPropagation()
-      // Delay para asegurar que el drag no se activó
-      clickTimeoutRef.current = setTimeout(() => {
-        if (!isSortableDragging && !isDragging && !hasMovedRef.current) {
-          setIsDialogOpen(true)
-        }
-        clickTimeoutRef.current = null
-      }, 100)
-    }
+    // Abrir modal directamente - el drag ya se activó si era necesario
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDialogOpen(true)
   }
 
   // Removemos handleMouseDown y handleMouseMove porque interfieren con el drag and drop

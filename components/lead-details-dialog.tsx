@@ -19,9 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { LeadStage, STAGES } from '@/lib/types/lead'
+import { LeadStage, STAGES, Lead } from '@/lib/types/lead'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Pencil, Save, X } from 'lucide-react'
 
 interface LeadDetailsDialogProps {
   lead: Lead
@@ -33,11 +37,37 @@ interface LeadDetailsDialogProps {
 export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: LeadDetailsDialogProps) {
   const [currentStage, setCurrentStage] = useState<LeadStage>(lead.stage)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedLead, setEditedLead] = useState<Partial<Lead>>({
+    nombre: lead.nombre,
+    empresa: lead.empresa,
+    email: lead.email,
+    telefono: lead.telefono,
+    producto: lead.producto,
+    marca: lead.marca,
+    volumen: lead.volumen,
+    envasado: lead.envasado,
+    mensaje: lead.mensaje || '',
+    inversionEstimada: lead.inversionEstimada || '',
+  })
+  const [newNote, setNewNote] = useState('')
 
   // Actualizar el estado local cuando cambia el lead
   useEffect(() => {
     setCurrentStage(lead.stage)
-  }, [lead.stage])
+    setEditedLead({
+      nombre: lead.nombre,
+      empresa: lead.empresa,
+      email: lead.email,
+      telefono: lead.telefono,
+      producto: lead.producto,
+      marca: lead.marca,
+      volumen: lead.volumen,
+      envasado: lead.envasado,
+      mensaje: lead.mensaje || '',
+      inversionEstimada: lead.inversionEstimada || '',
+    })
+  }, [lead])
 
   const handleStageChange = async (newStage: LeadStage) => {
     if (newStage === lead.stage) return
@@ -188,25 +218,50 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
               <Phone className="h-4 w-4" />
               Contacto
             </h3>
-            <div className="space-y-2 pl-6">
-              <a
-                href={`mailto:${lead.email}`}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Mail className="h-4 w-4" />
-                {lead.email}
-              </a>
-              <a
-                href={`tel:${lead.telefono}`}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Phone className="h-4 w-4" />
-                {lead.telefono}
-              </a>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                {lead.empresa}
-              </div>
+            <div className="space-y-3 pl-6">
+              {isEditing ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={editedLead.email}
+                      onChange={(e) => setEditedLead({ ...editedLead, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="telefono">Teléfono</Label>
+                    <Input
+                      id="telefono"
+                      type="tel"
+                      value={editedLead.telefono}
+                      onChange={(e) => setEditedLead({ ...editedLead, telefono: e.target.value })}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <a
+                    href={`mailto:${lead.email}`}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {lead.email}
+                  </a>
+                  <a
+                    href={`tel:${lead.telefono}`}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Phone className="h-4 w-4" />
+                    {lead.telefono}
+                  </a>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Building2 className="h-4 w-4" />
+                    {lead.empresa}
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex flex-wrap gap-2 mt-4 pl-6">
               <Button
@@ -250,56 +305,138 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
           <div>
             <h3 className="font-semibold mb-3">Detalles del Proyecto</h3>
             <div className="space-y-3 pl-6">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Producto:</span>
-                <Badge>{getProductoLabel(lead.producto)}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Marca registrada:</span>
-                <Badge variant={lead.marca === 'si' ? 'default' : 'secondary'}>
-                  {lead.marca === 'si' ? 'Sí' : 'No'}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Volumen mensual:</span>
-                <span className="font-medium">{getVolumenLabel(lead.volumen)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Envasado:</span>
-                <span className="font-medium">{getEnvasadoLabel(lead.envasado)}</span>
-              </div>
+              {isEditing ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="producto">Producto</Label>
+                    <Select
+                      value={editedLead.producto}
+                      onValueChange={(value) => setEditedLead({ ...editedLead, producto: value as 'alfajores' | 'galletitas' })}
+                    >
+                      <SelectTrigger id="producto">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alfajores">Alfajores</SelectItem>
+                        <SelectItem value="galletitas">Galletitas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="marca">Marca registrada</Label>
+                    <Select
+                      value={editedLead.marca}
+                      onValueChange={(value) => setEditedLead({ ...editedLead, marca: value as 'si' | 'no' })}
+                    >
+                      <SelectTrigger id="marca">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="si">Sí</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="volumen">Volumen mensual</Label>
+                    <Select
+                      value={editedLead.volumen}
+                      onValueChange={(value) => setEditedLead({ ...editedLead, volumen: value as 'menos-1000' | '1000-5000' | 'mas-5000' })}
+                    >
+                      <SelectTrigger id="volumen">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="menos-1000">Menos de 1,000 unidades/mes</SelectItem>
+                        <SelectItem value="1000-5000">1,000 - 5,000 unidades/mes</SelectItem>
+                        <SelectItem value="mas-5000">Más de 5,000 unidades/mes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="envasado">Tipo de envasado</Label>
+                    <Select
+                      value={editedLead.envasado}
+                      onValueChange={(value) => setEditedLead({ ...editedLead, envasado: value as 'flowpack-personalizado' | 'flowpack-cristal' | 'a-granel' })}
+                    >
+                      <SelectTrigger id="envasado">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flowpack-personalizado">Flowpack Personalizado</SelectItem>
+                        <SelectItem value="flowpack-cristal">Flowpack Cristal</SelectItem>
+                        <SelectItem value="a-granel">A Granel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Producto:</span>
+                    <Badge>{getProductoLabel(lead.producto)}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Marca registrada:</span>
+                    <Badge variant={lead.marca === 'si' ? 'default' : 'secondary'}>
+                      {lead.marca === 'si' ? 'Sí' : 'No'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Volumen mensual:</span>
+                    <span className="font-medium">{getVolumenLabel(lead.volumen)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Envasado:</span>
+                    <span className="font-medium">{getEnvasadoLabel(lead.envasado)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {lead.inversionEstimada && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  Inversión Estimada
-                </h3>
-                <div className="pl-6 text-2xl font-bold text-green-600">
-                  {lead.inversionEstimada}
+          <Separator />
+          <div>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              Inversión Estimada
+            </h3>
+            <div className="pl-6">
+              {isEditing ? (
+                <Input
+                  value={editedLead.inversionEstimada || ''}
+                  onChange={(e) => setEditedLead({ ...editedLead, inversionEstimada: e.target.value })}
+                  placeholder="Ej: $5,000,000"
+                />
+              ) : (
+                <div className="text-2xl font-bold text-green-600">
+                  {lead.inversionEstimada || 'No especificada'}
                 </div>
-              </div>
-            </>
-          )}
+              )}
+            </div>
+          </div>
 
-          {lead.mensaje && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Mensaje
-                </h3>
-                <p className="pl-6 text-muted-foreground whitespace-pre-wrap">
-                  {lead.mensaje}
+          <Separator />
+          <div>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Mensaje
+            </h3>
+            <div className="pl-6">
+              {isEditing ? (
+                <Textarea
+                  value={editedLead.mensaje || ''}
+                  onChange={(e) => setEditedLead({ ...editedLead, mensaje: e.target.value })}
+                  placeholder="Mensaje o comentarios adicionales"
+                  rows={4}
+                />
+              ) : (
+                <p className="text-muted-foreground whitespace-pre-wrap">
+                  {lead.mensaje || 'Sin mensaje'}
                 </p>
-              </div>
-            </>
-          )}
+              )}
+            </div>
+          </div>
 
           <Separator />
 
@@ -324,21 +461,36 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
             </div>
           </div>
 
-          {lead.notes && lead.notes.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="font-semibold mb-3">Notas</h3>
-                <div className="space-y-2 pl-6">
+          <Separator />
+          <div>
+            <h3 className="font-semibold mb-3">Notas</h3>
+            <div className="space-y-3 pl-6">
+              {lead.notes && lead.notes.length > 0 && (
+                <div className="space-y-2">
                   {lead.notes.map((note, index) => (
                     <div key={index} className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                       {note}
                     </div>
                   ))}
                 </div>
+              )}
+              <div className="space-y-2">
+                <Textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Agregar una nueva nota..."
+                  rows={3}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || isUpdating}
+                >
+                  Agregar Nota
+                </Button>
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
