@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Lead } from '@/lib/types/lead'
 import { KanbanBoard } from '@/components/kanban-board'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, TrendingUp, Users, DollarSign } from 'lucide-react'
+import { RefreshCw, TrendingUp, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -64,13 +64,6 @@ export default function CRMPage() {
   const stats = {
     total: leads.length,
     ganados: leads.filter((lead) => lead.stage === 'ganado').length,
-    inversionTotal: leads.reduce((sum, lead) => {
-      if (lead.inversionEstimada) {
-        const numStr = lead.inversionEstimada.replace(/[^0-9]/g, '')
-        return sum + parseInt(numStr) || 0
-      }
-      return sum
-    }, 0),
   }
 
   const conversionRate = stats.total > 0 ? ((stats.ganados / stats.total) * 100).toFixed(1) : '0'
@@ -101,7 +94,7 @@ export default function CRMPage() {
           </div>
 
           {/* Estadísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
@@ -129,18 +122,6 @@ export default function CRMPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{conversionRate}%</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Inversión Total</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${stats.inversionTotal.toLocaleString('es-AR')}
-                </div>
               </CardContent>
             </Card>
           </div>
