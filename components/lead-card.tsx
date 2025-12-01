@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { LeadDetailsDialog } from './lead-details-dialog'
 
 interface LeadCardProps {
@@ -30,6 +30,7 @@ interface LeadCardProps {
 
 export function LeadCard({ lead, isDragging }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const hasMovedRef = useRef(false)
   const clickStartTime = useRef<number | null>(null)
   const clickStartPos = useRef<{ x: number; y: number } | null>(null)
@@ -41,6 +42,16 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
     transition,
     isDragging: isSortableDragging,
   } = useSortable({ id: lead.id })
+
+  // Detectar si es mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -155,7 +166,8 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         Math.pow(touch.clientX - clickStartPos.current.x, 2) +
         Math.pow(touch.clientY - clickStartPos.current.y, 2)
       )
-      if (distance > 10) {
+      // Aumentar el umbral para que sea más fácil hacer tap
+      if (distance > 15) {
         hasMovedRef.current = true
       }
     }
@@ -181,16 +193,20 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
       y: Math.abs(touch.clientY - clickStartPos.current.y)
     } : { x: 0, y: 0 }
     
-    if (
-      !hasMovedRef.current && 
-      !isSortableDragging && 
-      !isDragging && 
-      timeDiff < 500 && 
-      posDiff.x < 15 && 
-      posDiff.y < 15
-    ) {
+    // En mobile, ser más permisivo con los taps
+    const isTap = !hasMovedRef.current && 
+                  !isSortableDragging && 
+                  !isDragging && 
+                  timeDiff < 600 && 
+                  posDiff.x < 25 && 
+                  posDiff.y < 25
+    
+    if (isTap) {
+      // Prevenir que el drag and drop capture el evento
       e.preventDefault()
       e.stopPropagation()
+      
+      // Abrir el modal directamente
       setIsDialogOpen(true)
     }
     
@@ -224,8 +240,9 @@ export function LeadCard({ lead, isDragging }: LeadCardProps) {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        {...attributes}
-        {...listeners}
+        // Solo aplicar listeners de drag en desktop, en mobile deshabilitamos drag
+        {...(!isMobile ? attributes : {})}
+        {...(!isMobile ? listeners : {})}
       >
         <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
           <div className="flex items-start justify-between gap-2">
