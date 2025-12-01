@@ -35,6 +35,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const hasMovedRef = useRef(false)
   const clickStartTime = useRef<number | null>(null)
   const clickStartPos = useRef<{ x: number; y: number } | null>(null)
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const {
     attributes,
     listeners,
@@ -51,7 +52,13 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    return () => {
+      window.removeEventListener('resize', checkMobile)
+      // Limpiar timeout al desmontar
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current)
+      }
+    }
   }, [])
 
   const style = {
@@ -88,24 +95,52 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
       return
     }
     
-    // Verificar si fue un click rápido (no un drag)
-    const timeDiff = clickStartTime.current ? Date.now() - clickStartTime.current : 0
-    const posDiff = clickStartPos.current ? {
-      x: Math.abs(e.clientX - clickStartPos.current.x),
-      y: Math.abs(e.clientY - clickStartPos.current.y)
-    } : { x: 0, y: 0 }
+    // Si estamos en drag, no hacer click
+    if (isSortableDragging || isDragging) {
+      // Limpiar timeout si existe
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current)
+        clickTimeoutRef.current = null
+      }
+      clickStartTime.current = null
+      clickStartPos.current = null
+      hasMovedRef.current = false
+      return
+    }
     
-    // Solo abrir si fue un click rápido y no hubo movimiento significativo
-    if (
-      !isSortableDragging && 
-      !isDragging && 
-      timeDiff < 300 && 
-      posDiff.x < 10 && 
-      posDiff.y < 10
-    ) {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDialogOpen(true)
+    // En desktop, verificar si fue un click rápido (no un drag)
+    if (!isMobile) {
+      // Si hubo movimiento significativo, fue un drag, no un click
+      if (hasMovedRef.current) {
+        clickStartTime.current = null
+        clickStartPos.current = null
+        hasMovedRef.current = false
+        if (clickTimeoutRef.current) {
+          clearTimeout(clickTimeoutRef.current)
+          clickTimeoutRef.current = null
+        }
+        return
+      }
+      
+      const timeDiff = clickStartTime.current ? Date.now() - clickStartTime.current : 0
+      const posDiff = clickStartPos.current ? {
+        x: Math.abs(e.clientX - clickStartPos.current.x),
+        y: Math.abs(e.clientY - clickStartPos.current.y)
+      } : { x: 0, y: 0 }
+      
+      // Solo abrir si fue un click rápido y no hubo movimiento significativo
+      // Usar un pequeño delay para asegurar que el drag no se active
+      if (timeDiff < 300 && posDiff.x < 10 && posDiff.y < 10) {
+        e.preventDefault()
+        e.stopPropagation()
+        // Pequeño delay para asegurar que no fue un drag
+        clickTimeoutRef.current = setTimeout(() => {
+          if (!isSortableDragging && !isDragging) {
+            setIsDialogOpen(true)
+          }
+          clickTimeoutRef.current = null
+        }, 50)
+      }
     }
     
     // Resetear
@@ -125,20 +160,32 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
       return
     }
     
-    // Guardar posición y tiempo inicial
-    clickStartTime.current = Date.now()
-    clickStartPos.current = { x: e.clientX, y: e.clientY }
-    hasMovedRef.current = false
+    // En desktop, guardar posición y tiempo inicial solo si no es mobile
+    // No interferir con el drag and drop - solo registrar para detectar clicks
+    // Usar un pequeño delay para permitir que el drag se active primero
+    if (!isMobile) {
+      clickStartTime.current = Date.now()
+      clickStartPos.current = { x: e.clientX, y: e.clientY }
+      hasMovedRef.current = false
+      
+      // Limpiar timeout anterior si existe
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current)
+        clickTimeoutRef.current = null
+      }
+    }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    // Si hay movimiento significativo, marcar como drag
-    if (clickStartPos.current) {
+    // Solo en desktop, si hay movimiento significativo, marcar como drag
+    // Esto ayuda a diferenciar entre click y drag, pero no bloquea el drag and drop
+    if (!isMobile && clickStartPos.current && !isSortableDragging && !isDragging) {
       const distance = Math.sqrt(
         Math.pow(e.clientX - clickStartPos.current.x, 2) +
         Math.pow(e.clientY - clickStartPos.current.y, 2)
       )
-      if (distance > 5) {
+      // Si el movimiento es mayor al umbral de activación del drag, fue un drag
+      if (distance > 8) {
         hasMovedRef.current = true
       }
     }
@@ -263,15 +310,14 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
           'cursor-pointer touch-manipulation select-none w-full',
           (isDragging || isSortableDragging) && 'shadow-lg scale-105'
         )}
+        // Aplicar listeners de drag primero en desktop (tienen prioridad)
+        {...(isMobile ? {} : { ...attributes, ...listeners })}
         onClick={handleCardClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        // Solo aplicar listeners de drag en desktop, en mobile deshabilitamos drag
-        {...(!isMobile ? attributes : {})}
-        {...(!isMobile ? listeners : {})}
+        onMouseDown={!isMobile ? handleMouseDown : undefined}
+        onMouseMove={!isMobile ? handleMouseMove : undefined}
+        onTouchStart={isMobile ? handleTouchStart : undefined}
+        onTouchMove={isMobile ? handleTouchMove : undefined}
+        onTouchEnd={isMobile ? handleTouchEnd : undefined}
       >
         <CardHeader className="pb-2 sm:pb-2.5 md:pb-3 px-2.5 sm:px-3 md:px-4 pt-2.5 sm:pt-3 md:pt-4">
           <div className="flex items-start justify-between gap-1.5 md:gap-2">
