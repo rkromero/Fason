@@ -29,6 +29,8 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
   const touchEndX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const touchEndY = useRef<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -89,24 +91,42 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
       return
     }
     touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return
+    if (touchStartX.current === null || touchStartY.current === null) return
+    
     touchEndX.current = e.touches[0].clientX
+    touchEndY.current = e.touches[0].clientY
+
+    // Calcular la distancia horizontal y vertical
+    const deltaX = Math.abs(touchEndX.current - touchStartX.current)
+    const deltaY = Math.abs((touchEndY.current || 0) - touchStartY.current)
+
+    // Si el movimiento es principalmente horizontal, prevenir el scroll de la página
+    if (deltaX > deltaY && deltaX > 10) {
+      e.preventDefault()
+    }
   }
 
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) {
       touchStartX.current = null
       touchEndX.current = null
+      touchStartY.current = null
+      touchEndY.current = null
       return
     }
 
     const distance = touchStartX.current - touchEndX.current
+    const verticalDistance = touchStartY.current && touchEndY.current 
+      ? Math.abs(touchEndY.current - touchStartY.current) 
+      : 0
     const minSwipeDistance = 50
 
-    if (Math.abs(distance) > minSwipeDistance) {
+    // Solo procesar swipe si es principalmente horizontal
+    if (Math.abs(distance) > minSwipeDistance && Math.abs(distance) > verticalDistance) {
       if (distance > 0) {
         // Swipe izquierda - siguiente columna
         goToNextStage()
@@ -118,6 +138,8 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
 
     touchStartX.current = null
     touchEndX.current = null
+    touchStartY.current = null
+    touchEndY.current = null
   }
 
   return (
@@ -178,7 +200,8 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="relative"
+          className="relative touch-pan-y"
+          style={{ touchAction: 'pan-y' }}
         >
           {/* Vista mobile: una columna a la vez */}
           <div className="md:hidden overflow-hidden">
