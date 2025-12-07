@@ -34,10 +34,10 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
   const [empresa, setEmpresa] = useState('')
   const [email, setEmail] = useState('')
   const [telefono, setTelefono] = useState('')
-  const [producto, setProducto] = useState<'alfajores' | 'galletitas' | ''>('')
-  const [marca, setMarca] = useState<'si' | 'no' | ''>('')
-  const [volumen, setVolumen] = useState<'menos-1000' | '1000-5000' | 'mas-5000' | ''>('')
-  const [envasado, setEnvasado] = useState<'flowpack-personalizado' | 'flowpack-cristal' | 'a-granel' | ''>('')
+  const [producto, setProducto] = useState<string>('')
+  const [marca, setMarca] = useState<string>('')
+  const [volumen, setVolumen] = useState<string>('')
+  const [envasado, setEnvasado] = useState<string>('')
   const [mensaje, setMensaje] = useState('')
   const [inversionEstimada, setInversionEstimada] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -211,8 +211,8 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
                 Producto <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={producto}
-                onValueChange={(value) => setProducto(value as 'alfajores' | 'galletitas')}
+                value={producto || undefined}
+                onValueChange={(value) => setProducto(value)}
                 disabled={isSubmitting}
                 required
               >
@@ -232,8 +232,8 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
                 ¿Tiene marca registrada? <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={marca}
-                onValueChange={(value) => setMarca(value as 'si' | 'no')}
+                value={marca || undefined}
+                onValueChange={(value) => setMarca(value)}
                 disabled={isSubmitting}
                 required
               >
@@ -253,8 +253,8 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
                 Volumen mensual <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={volumen}
-                onValueChange={(value) => setVolumen(value as 'menos-1000' | '1000-5000' | 'mas-5000')}
+                value={volumen || undefined}
+                onValueChange={(value) => setVolumen(value)}
                 disabled={isSubmitting}
                 required
               >
@@ -275,8 +275,8 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
                 Tipo de envasado <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={envasado}
-                onValueChange={(value) => setEnvasado(value as 'flowpack-personalizado' | 'flowpack-cristal' | 'a-granel')}
+                value={envasado || undefined}
+                onValueChange={(value) => setEnvasado(value)}
                 disabled={isSubmitting}
                 required
               >
