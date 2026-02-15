@@ -3,20 +3,23 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Lead } from '@/lib/types/lead'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Mail, Phone, Building2, DollarSign, MoreVertical, MessageCircle, GripVertical, Clock } from 'lucide-react'
+import {
+  MoreHorizontal,
+  Mail,
+  Phone,
+  MessageCircle,
+  Eye,
+  GripVertical,
+  Clock,
+  DollarSign,
+  Building2,
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -42,18 +45,18 @@ function getLeadAgeLabel(days: number): string {
   return `${Math.floor(days / 30)}m`
 }
 
-function getLeadAgeColor(days: number): string {
-  if (days <= 3) return 'bg-green-100 text-green-700'
-  if (days <= 14) return 'bg-yellow-100 text-yellow-700'
-  return 'bg-red-100 text-red-700'
+function getLeadAgeStyle(days: number): string {
+  if (days <= 3) return 'text-emerald-600 bg-emerald-50'
+  if (days <= 14) return 'text-amber-600 bg-amber-50'
+  return 'text-red-500 bg-red-50'
 }
 
-function getPriorityConfig(priority?: string) {
+function getPriorityStyle(priority?: string) {
   switch (priority) {
-    case 'A': return { label: 'A', color: 'bg-red-500 text-white', ring: 'ring-red-200' }
-    case 'B': return { label: 'B', color: 'bg-amber-500 text-white', ring: 'ring-amber-200' }
-    case 'C': return { label: 'C', color: 'bg-gray-400 text-white', ring: 'ring-gray-200' }
-    default: return { label: '—', color: 'bg-gray-200 text-gray-500', ring: 'ring-gray-100' }
+    case 'A': return { label: 'A', cls: 'bg-red-500' }
+    case 'B': return { label: 'B', cls: 'bg-amber-400' }
+    case 'C': return { label: 'C', cls: 'bg-gray-300' }
+    default:  return { label: '–', cls: 'bg-gray-200' }
   }
 }
 
@@ -63,8 +66,8 @@ function getOwnerInitial(owner?: string): string {
 }
 
 const OWNER_COLORS = [
-  'bg-blue-600', 'bg-purple-600', 'bg-teal-600', 'bg-pink-600',
-  'bg-indigo-600', 'bg-orange-600', 'bg-emerald-600', 'bg-rose-600',
+  'bg-blue-600', 'bg-violet-600', 'bg-teal-600', 'bg-pink-600',
+  'bg-indigo-600', 'bg-orange-500', 'bg-emerald-600', 'bg-rose-500',
 ]
 
 function getOwnerColor(owner?: string): string {
@@ -76,7 +79,20 @@ function getOwnerColor(owner?: string): string {
   return OWNER_COLORS[Math.abs(hash) % OWNER_COLORS.length]
 }
 
-// ─── Componente ──────────────────────────────────────────────────
+function getProductoLabel(producto: string) {
+  return producto === 'alfajores' ? 'Alfajores' : 'Galletitas'
+}
+
+function getVolumenLabel(volumen: string) {
+  switch (volumen) {
+    case 'menos-1000': return '<1K'
+    case '1000-5000': return '1-5K'
+    case 'mas-5000': return '>5K'
+    default: return volumen
+  }
+}
+
+// ─── Component ───────────────────────────────────────────────────
 export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -84,6 +100,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const clickStartTime = useRef<number | null>(null)
   const clickStartPos = useRef<{ x: number; y: number } | null>(null)
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const {
     attributes,
     listeners,
@@ -93,26 +110,18 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
     isDragging: isSortableDragging,
   } = useSortable({ id: lead.id })
 
-  // Detectar si es mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
     return () => {
-      window.removeEventListener('resize', checkMobile)
-      // Limpiar timeout al desmontar
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current)
-      }
+      window.removeEventListener('resize', check)
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
     }
   }, [])
 
-  // Detectar cuando se inicia un drag para cancelar el click
   useEffect(() => {
     if (isSortableDragging || isDragging) {
-      // Si se inicia un drag, cancelar cualquier click pendiente
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current)
         clickTimeoutRef.current = null
@@ -123,61 +132,13 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging || isSortableDragging ? 0.5 : 1,
+    opacity: isDragging || isSortableDragging ? 0.4 : 1,
   }
 
-  const getProductoLabel = (producto: string) => {
-    return producto === 'alfajores' ? 'Alfajores' : 'Galletitas'
-  }
-
-  const getVolumenLabel = (volumen: string) => {
-    switch (volumen) {
-      case 'menos-1000':
-        return '<1K/mes'
-      case '1000-5000':
-        return '1K-5K/mes'
-      case 'mas-5000':
-        return '>5K/mes'
-      default:
-        return volumen
-    }
-  }
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Verificar que el target no sea un botón, enlace o elemento interactivo
-    const target = e.target as HTMLElement
-    if (
-      target.closest('button') ||
-      target.closest('a') ||
-      target.closest('[role="button"]')
-    ) {
-      return
-    }
-    
-    // Si estamos en drag, no hacer click
-    if (isSortableDragging || isDragging) {
-      return
-    }
-    
-    // Abrir modal directamente
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDialogOpen(true)
-  }
-
-  // Removemos handleMouseDown y handleMouseMove porque interfieren con el drag and drop
-  // El drag and drop de dnd-kit maneja estos eventos directamente
-
+  // ─── Touch handlers (mobile tap vs drag) ─────────────
   const handleTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement
-    if (
-      target.closest('button') ||
-      target.closest('a') ||
-      target.closest('[role="button"]')
-    ) {
-      return
-    }
-    
+    if (target.closest('button') || target.closest('a') || target.closest('[role="button"]')) return
     const touch = e.touches[0]
     clickStartTime.current = Date.now()
     clickStartPos.current = { x: touch.clientX, y: touch.clientY }
@@ -191,51 +152,28 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         Math.pow(touch.clientX - clickStartPos.current.x, 2) +
         Math.pow(touch.clientY - clickStartPos.current.y, 2)
       )
-      // Aumentar el umbral para que sea más fácil hacer tap
-      if (distance > 15) {
-        hasMovedRef.current = true
-      }
+      if (distance > 15) hasMovedRef.current = true
     }
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement
-    if (
-      target.closest('button') ||
-      target.closest('a') ||
-      target.closest('[role="button"]')
-    ) {
+    if (target.closest('button') || target.closest('a') || target.closest('[role="button"]')) {
       clickStartTime.current = null
       clickStartPos.current = null
       return
     }
-    
-    // Si fue un tap (no drag), abrir el modal
     const timeDiff = clickStartTime.current ? Date.now() - clickStartTime.current : 0
     const touch = e.changedTouches[0]
-    const posDiff = clickStartPos.current ? {
-      x: Math.abs(touch.clientX - clickStartPos.current.x),
-      y: Math.abs(touch.clientY - clickStartPos.current.y)
-    } : { x: 0, y: 0 }
-    
-    // En mobile, ser más permisivo con los taps
-    const isTap = !hasMovedRef.current && 
-                  !isSortableDragging && 
-                  !isDragging && 
-                  timeDiff < 600 && 
-                  posDiff.x < 25 && 
-                  posDiff.y < 25
-    
+    const posDiff = clickStartPos.current
+      ? { x: Math.abs(touch.clientX - clickStartPos.current.x), y: Math.abs(touch.clientY - clickStartPos.current.y) }
+      : { x: 0, y: 0 }
+    const isTap = !hasMovedRef.current && !isSortableDragging && !isDragging && timeDiff < 600 && posDiff.x < 25 && posDiff.y < 25
     if (isTap) {
-      // Prevenir que el drag and drop capture el evento
       e.preventDefault()
       e.stopPropagation()
-      
-      // Abrir el modal directamente
       setIsDialogOpen(true)
     }
-    
-    // Resetear
     clickStartTime.current = null
     clickStartPos.current = null
     hasMovedRef.current = false
@@ -243,86 +181,49 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, +, y otros caracteres)
-    let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '')
-    
-    // Remover cualquier carácter que no sea número
-    cleanPhone = cleanPhone.replace(/\D/g, '')
-    
-    // Si el número está vacío después de limpiar, mostrar error
-    if (!cleanPhone || cleanPhone.length < 8) {
-      alert('Número de teléfono inválido')
-      return
-    }
-    
-    // Si empieza con 0, removerlo (código de país local)
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1)
-    }
-    
-    // Si no empieza con código de país, asumir Argentina (54)
-    // Verificar si ya tiene código de país (Argentina: 54, otros países tienen códigos de 1-3 dígitos)
+    let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '').replace(/\D/g, '')
+    if (!cleanPhone || cleanPhone.length < 8) { alert('Número de teléfono inválido'); return }
+    if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1)
     if (!cleanPhone.startsWith('54') && !cleanPhone.match(/^[1-9]\d{1,2}/)) {
-      // Si tiene 10 dígitos o menos, asumir que es número argentino sin código de país
-      if (cleanPhone.length <= 10) {
-        cleanPhone = `54${cleanPhone}`
-      }
+      if (cleanPhone.length <= 10) cleanPhone = `54${cleanPhone}`
     }
-    
-    // Validar que el número tenga al menos 10 dígitos (código de país + número)
-    if (cleanPhone.length < 10) {
-      alert('Número de teléfono inválido')
-      return
-    }
-    
+    if (cleanPhone.length < 10) { alert('Número de teléfono inválido'); return }
     window.open(`https://wa.me/${cleanPhone}`, '_blank')
   }
 
+  const openCard = () => {
+    if (!isSortableDragging && !isDragging) setIsDialogOpen(true)
+  }
+
+  const priority = getPriorityStyle(lead.priority)
+  const ageDays = getLeadAgeDays(lead.createdAt)
+
   return (
     <>
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="w-full"
-      >
-        <Card
+      <div ref={setNodeRef} style={style} className="w-full">
+        <div
           className={cn(
-            'cursor-pointer touch-manipulation select-none w-full relative bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-lg',
-            (isDragging || isSortableDragging) && 'shadow-xl scale-105 opacity-90 rotate-2'
+            'group relative rounded-md border border-gray-200/80 bg-white px-3 py-2.5',
+            'cursor-pointer select-none touch-manipulation',
+            'hover:border-gray-300 hover:shadow-[0_2px_8px_rgb(0,0,0,0.04)] transition-all duration-150',
+            (isDragging || isSortableDragging) && 'shadow-lg scale-[1.02] opacity-80 border-gray-300 rotate-1'
           )}
-          // onClick directo sin verificaciones complejas
           onClick={(e) => {
-            // Verificar que el target no sea un botón, enlace, o el handle de drag
             const target = e.target as HTMLElement
-            if (
-              target.closest('button') ||
-              target.closest('a') ||
-              target.closest('[role="button"]') ||
-              target.closest('[data-drag-handle]')
-            ) {
-              return
-            }
-            
-            // Si estamos en drag, no hacer click
-            if (isSortableDragging || isDragging) {
-              return
-            }
-            
-            // Abrir modal directamente
-            setIsDialogOpen(true)
+            if (target.closest('button') || target.closest('a') || target.closest('[role="button"]') || target.closest('[data-drag-handle]')) return
+            openCard()
           }}
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchMove={isMobile ? handleTouchMove : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-        <CardHeader className="pb-2 px-3 pt-3">
-          {/* Top row: priority dot + name + age badge + menu */}
-          <div className="flex items-start justify-between gap-1.5">
-            {/* Handle de drag solo en desktop */}
+          {/* Row 1: Priority dot + Name + Age + Menu */}
+          <div className="flex items-center gap-2 mb-1.5">
+            {/* Drag handle (desktop only) */}
             {!isMobile && (
               <div
                 data-drag-handle
-                className="cursor-grab active:cursor-grabbing touch-none mr-0.5 opacity-50 hover:opacity-70 transition-opacity mt-0.5"
+                className="cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-opacity -ml-1"
                 {...attributes}
                 {...listeners}
                 onClick={(e) => e.stopPropagation()}
@@ -331,163 +232,104 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
               </div>
             )}
 
-            {/* Priority badge */}
-            {(() => {
-              const p = getPriorityConfig(lead.priority)
-              return (
-                <span
-                  className={cn(
-                    'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold shrink-0 ring-1 mt-0.5',
-                    p.color, p.ring
-                  )}
-                  title={`Prioridad ${p.label}`}
-                >
-                  {p.label}
-                </span>
-              )
-            })()}
+            {/* Priority dot */}
+            <span
+              className={cn('h-2 w-2 rounded-full shrink-0', priority.cls)}
+              title={`Prioridad ${priority.label}`}
+            />
 
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm font-medium text-gray-900 truncate leading-tight">{lead.nombre}</CardTitle>
-              <CardDescription className="flex items-center gap-1 mt-1 text-xs text-gray-600">
-                <Building2 className="h-3 w-3 shrink-0" />
-                <span className="truncate">{lead.empresa}</span>
-              </CardDescription>
-            </div>
+            {/* Name */}
+            <span className="flex-1 text-[13px] font-medium text-gray-900 truncate leading-tight">
+              {lead.nombre}
+            </span>
 
-            {/* Lead age badge */}
-            {(() => {
-              const days = getLeadAgeDays(lead.createdAt)
-              return (
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold shrink-0',
-                    getLeadAgeColor(days)
-                  )}
-                  title={`Creado hace ${days} días`}
-                >
-                  <Clock className="h-2.5 w-2.5" />
-                  {getLeadAgeLabel(days)}
-                </span>
-              )
-            })()}
+            {/* Age badge */}
+            <span className={cn(
+              'crm-badge !px-1.5 !py-0 !text-[10px] !font-semibold tabular-nums shrink-0',
+              getLeadAgeStyle(ageDays)
+            )}>
+              {getLeadAgeLabel(ageDays)}
+            </span>
 
+            {/* Actions menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6 shrink-0 touch-manipulation hover:bg-gray-100 rounded-full"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-6 w-6 shrink-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity',
+                    'hover:bg-gray-100 focus-visible:opacity-100'
+                  )}
                 >
-                  <MoreVertical className="h-3.5 w-3.5 text-gray-500" />
+                  <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsDialogOpen(true)
-                  }}
-                >
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDialogOpen(true) }}>
+                  <Eye className="h-3.5 w-3.5 mr-2" />
                   Ver detalles
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    window.location.href = `mailto:${lead.email}`
-                  }}
-                >
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${lead.email}` }}>
+                  <Mail className="h-3.5 w-3.5 mr-2" />
                   Enviar email
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    window.location.href = `tel:${lead.telefono}`
-                  }}
-                >
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }}>
+                  <Phone className="h-3.5 w-3.5 mr-2" />
                   Llamar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleWhatsAppClick}>
+                  <MessageCircle className="h-3.5 w-3.5 mr-2" />
+                  WhatsApp
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2 px-3 pb-3">
-          {/* Badges: producto + volumen */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 border-0 rounded-full font-medium">
-              {getProductoLabel(lead.producto)}
-            </Badge>
-            <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-700 border-0 rounded-full font-medium">
-              {getVolumenLabel(lead.volumen)}
-            </Badge>
+
+          {/* Row 2: Company */}
+          <div className="flex items-center gap-1.5 mb-2 pl-4">
+            <Building2 className="h-3 w-3 text-gray-400 shrink-0" />
+            <span className="text-[12px] text-gray-500 truncate">{lead.empresa}</span>
           </div>
 
-          {/* Inversión estimada */}
-          {lead.inversionEstimada && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-700 bg-green-50 rounded px-2 py-1">
-              <DollarSign className="h-3 w-3 text-green-600 shrink-0" />
-              <span className="font-semibold text-green-700">{lead.inversionEstimada}</span>
-            </div>
-          )}
+          {/* Row 3: Metadata badges + amount */}
+          <div className="flex items-center gap-1.5 flex-wrap pl-4">
+            <span className="crm-badge bg-gray-100 text-gray-600">
+              {getProductoLabel(lead.producto)}
+            </span>
+            <span className="crm-badge bg-gray-100 text-gray-500">
+              {getVolumenLabel(lead.volumen)}
+            </span>
+            {lead.inversionEstimada && (
+              <span className="crm-badge bg-emerald-50 text-emerald-700">
+                <DollarSign className="h-3 w-3 mr-0.5" />
+                {lead.inversionEstimada}
+              </span>
+            )}
+          </div>
 
-          {/* Owner row */}
-          <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-            {/* Owner avatar */}
+          {/* Row 4: Owner + last contact */}
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 pl-4">
             <div className="flex items-center gap-1.5" title={lead.owner || 'Sin asignar'}>
               <span className={cn(
-                'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0',
+                'flex h-4.5 w-4.5 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0',
                 getOwnerColor(lead.owner)
               )}>
                 {getOwnerInitial(lead.owner)}
               </span>
-              <span className="text-[10px] text-gray-600 font-medium truncate max-w-[80px]">
+              <span className="text-[11px] text-gray-500 truncate max-w-[72px]">
                 {lead.owner || 'Sin asignar'}
               </span>
             </div>
-
-            {/* Contact actions */}
-            <div className="flex items-center gap-1 text-[10px] text-gray-500">
-              <a
-                href={`mailto:${lead.email}`}
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center justify-center h-6 w-6 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors touch-manipulation"
-                title={lead.email}
-              >
-                <Mail className="h-3 w-3" />
-              </a>
-              <a
-                href={`tel:${lead.telefono}`}
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center justify-center h-6 w-6 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors touch-manipulation"
-                title={lead.telefono}
-              >
-                <Phone className="h-3 w-3" />
-              </a>
-              <button
-                onClick={handleWhatsAppClick}
-                className="flex items-center justify-center h-6 w-6 hover:text-[#25D366] hover:bg-green-50 rounded-full transition-colors touch-manipulation"
-                title="WhatsApp"
-              >
-                <svg
-                  className="h-3 w-3"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                </svg>
-              </button>
-            </div>
+            {lead.lastContact && (
+              <span className="text-[10px] text-gray-400 flex items-center gap-1 tabular-nums">
+                <Clock className="h-2.5 w-2.5" />
+                {new Date(lead.lastContact).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+              </span>
+            )}
           </div>
-
-          {/* Last contact */}
-          {lead.lastContact && (
-            <div className="text-[10px] text-gray-400">
-              Último contacto: {new Date(lead.lastContact).toLocaleDateString('es-AR')}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
       </div>
 
       <LeadDetailsDialog
@@ -499,4 +341,3 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
     </>
   )
 }
-

@@ -34,43 +34,26 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 3, // Distancia mínima para activar drag (muy sensible)
-      },
+      activationConstraint: { distance: 3 },
     })
   )
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event
-    const lead = leads.find((l) => l.id === active.id)
+    const lead = leads.find((l) => l.id === event.active.id)
     setActiveLead(lead || null)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveLead(null)
-
-    if (!over) {
-      console.log('No over target in handleDragEnd')
-      return
-    }
-
+    if (!over) return
     const leadId = active.id as string
     const newStage = over.id as LeadStage
-
-    console.log('Dropping lead:', leadId, 'to stage:', newStage)
-
-    // Verificar que el stage sea válido
     const isValidStage = STAGES.some((stage) => stage.id === newStage)
-    if (!isValidStage) {
-      console.log('Invalid stage:', newStage)
-      return
-    }
-
+    if (!isValidStage) return
     onUpdateLead(leadId, { stage: newStage })
   }
 
-  // Navegación entre columnas
   const goToNextStage = useCallback(() => {
     setCurrentStageIndex((prev) => (prev + 1) % STAGES.length)
   }, [])
@@ -79,23 +62,17 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     setCurrentStageIndex((prev) => (prev - 1 + STAGES.length) % STAGES.length)
   }, [])
 
-  const goToStage = (index: number) => {
-    setCurrentStageIndex(index)
-  }
+  const goToStage = (index: number) => setCurrentStageIndex(index)
 
-  // Manejo de swipe gestures usando event listeners nativos (para poder usar passive: false)
+  // Swipe gestures
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-
     let isHorizontalSwipe = false
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Solo capturar si no es una tarjeta, botón o enlace
       const target = e.target as HTMLElement
-      if (target.closest('[data-sortable-id]') || target.closest('button') || target.closest('a')) {
-        return
-      }
+      if (target.closest('[data-sortable-id]') || target.closest('button') || target.closest('a')) return
       touchStartX.current = e.touches[0].clientX
       touchStartY.current = e.touches[0].clientY
       isHorizontalSwipe = false
@@ -103,74 +80,45 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
 
     const handleTouchMove = (e: TouchEvent) => {
       if (touchStartX.current === null || touchStartY.current === null) return
-      
       touchEndX.current = e.touches[0].clientX
       touchEndY.current = e.touches[0].clientY
-
-      // Calcular la distancia horizontal y vertical
       const deltaX = Math.abs(touchEndX.current - touchStartX.current)
       const deltaY = Math.abs((touchEndY.current || 0) - touchStartY.current)
-
-      // Si el movimiento es principalmente horizontal, prevenir el scroll de la página
       if (deltaX > deltaY && deltaX > 5) {
         isHorizontalSwipe = true
         e.preventDefault()
         e.stopPropagation()
         e.stopImmediatePropagation()
       } else if (deltaY > deltaX && deltaY > 5) {
-        // Si es principalmente vertical, permitir scroll
         isHorizontalSwipe = false
       }
     }
 
     const handleTouchEnd = (e: TouchEvent) => {
       if (!touchStartX.current || !touchEndX.current) {
-        touchStartX.current = null
-        touchEndX.current = null
-        touchStartY.current = null
-        touchEndY.current = null
+        touchStartX.current = null; touchEndX.current = null
+        touchStartY.current = null; touchEndY.current = null
         isHorizontalSwipe = false
         return
       }
-
       const distance = touchStartX.current - touchEndX.current
-      const verticalDistance = touchStartY.current && touchEndY.current 
-        ? Math.abs(touchEndY.current - touchStartY.current) 
-        : 0
-      const minSwipeDistance = 30
-
-      // Solo procesar swipe si es principalmente horizontal
-      if (isHorizontalSwipe && Math.abs(distance) > minSwipeDistance && Math.abs(distance) > verticalDistance) {
+      const verticalDistance = touchStartY.current && touchEndY.current ? Math.abs(touchEndY.current - touchStartY.current) : 0
+      if (isHorizontalSwipe && Math.abs(distance) > 30 && Math.abs(distance) > verticalDistance) {
         e.preventDefault()
         e.stopPropagation()
-        if (distance > 0) {
-          // Swipe izquierda - siguiente columna
-          goToNextStage()
-        } else {
-          // Swipe derecha - columna anterior
-          goToPreviousStage()
-        }
+        if (distance > 0) goToNextStage()
+        else goToPreviousStage()
       }
-
-      touchStartX.current = null
-      touchEndX.current = null
-      touchStartY.current = null
-      touchEndY.current = null
+      touchStartX.current = null; touchEndX.current = null
+      touchStartY.current = null; touchEndY.current = null
       isHorizontalSwipe = false
     }
 
-    // Agregar event listeners con passive: false para poder hacer preventDefault
     container.addEventListener('touchstart', handleTouchStart, { passive: true })
     container.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
     container.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true })
 
-    // También prevenir scroll en el body cuando hay un swipe horizontal activo
-    const preventBodyScroll = (e: TouchEvent) => {
-      if (isHorizontalSwipe) {
-        e.preventDefault()
-      }
-    }
-
+    const preventBodyScroll = (e: TouchEvent) => { if (isHorizontalSwipe) e.preventDefault() }
     document.body.addEventListener('touchmove', preventBodyScroll, { passive: false })
 
     return () => {
@@ -182,117 +130,85 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
   }, [goToNextStage, goToPreviousStage])
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="relative">
-        {/* Navegación mobile - Botones y indicadores mejorados */}
-        <div className="md:hidden mb-4">
-          {/* Indicadores de columnas - Diseño tipo tabs mejorado */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 px-1 scrollbar-hide">
+        {/* ─── Mobile navigation ─────────────────────────── */}
+        <div className="md:hidden mb-3">
+          {/* Stage tabs */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-hide">
             {STAGES.map((stage, index) => {
-              const stageLeads = leads.filter((lead) => lead.stage === stage.id)
+              const count = leads.filter((l) => l.stage === stage.id).length
               const isActive = currentStageIndex === index
               return (
                 <button
                   key={stage.id}
                   onClick={() => goToStage(index)}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-1.5 px-4 py-3 rounded-xl transition-all duration-200 min-w-[90px] relative',
-                    'border-2 shadow-sm',
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium whitespace-nowrap transition-all border',
                     isActive
-                      ? 'bg-white border-blue-500 text-blue-700 shadow-md scale-105'
-                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-95'
+                      ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   )}
                 >
-                  {/* Indicador activo */}
-                  {isActive && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-500 rounded-b-full" />
-                  )}
+                  <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', isActive ? 'bg-white' : stage.dot)} />
+                  {stage.label}
                   <span className={cn(
-                    'text-xs font-semibold truncate w-full text-center leading-tight',
-                    isActive ? 'text-blue-700' : 'text-gray-600'
+                    'text-[10px] font-bold tabular-nums ml-0.5',
+                    isActive ? 'text-gray-300' : 'text-gray-400'
                   )}>
-                    {stage.label}
-                  </span>
-                  <span className={cn(
-                    'text-sm font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center',
-                    isActive 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-gray-200 text-gray-700'
-                  )}>
-                    {stageLeads.length}
+                    {count}
                   </span>
                 </button>
               )
             })}
           </div>
-          
-          {/* Botones de navegación mejorados */}
-          <div className="flex items-center justify-center gap-3 mt-3">
+
+          {/* Nav buttons + dots */}
+          <div className="flex items-center justify-center gap-3 mt-2">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={goToPreviousStage}
-              className="h-9 px-4 rounded-lg border-gray-300 bg-white hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
+              className="h-7 w-7 p-0 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              <span className="text-sm font-medium">Anterior</span>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               {STAGES.map((_, index) => (
                 <div
                   key={index}
                   className={cn(
-                    'h-1.5 rounded-full transition-all duration-200',
-                    currentStageIndex === index
-                      ? 'w-6 bg-blue-500'
-                      : 'w-1.5 bg-gray-300'
+                    'h-1 rounded-full transition-all duration-200',
+                    currentStageIndex === index ? 'w-4 bg-gray-900' : 'w-1 bg-gray-300'
                   )}
                 />
               ))}
             </div>
-            
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={goToNextStage}
-              className="h-9 px-4 rounded-lg border-gray-300 bg-white hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
+              className="h-7 w-7 p-0 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
             >
-              <span className="text-sm font-medium">Siguiente</span>
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        {/* Contenedor de columnas */}
-        <div
-          ref={containerRef}
-          className="relative"
-        >
-          {/* Vista mobile: una columna a la vez */}
+        {/* ─── Columns container ─────────────────────────── */}
+        <div ref={containerRef} className="relative">
+          {/* Mobile: one column at a time */}
           <div className="md:hidden overflow-hidden" style={{ touchAction: 'none' }}>
             <div
               className="flex transition-transform duration-300 ease-in-out"
-              style={{
-                transform: `translateX(-${currentStageIndex * 100}%)`,
-              }}
+              style={{ transform: `translateX(-${currentStageIndex * 100}%)` }}
             >
               {STAGES.map((stage) => {
                 const stageLeads = leads.filter((lead) => lead.stage === stage.id)
                 return (
-                  <div key={stage.id} className="w-full shrink-0 px-2">
-                    <KanbanColumn
-                      stage={stage}
-                      leadCount={stageLeads.length}
-                    >
-                      <SortableContext
-                        items={stageLeads.map((lead) => lead.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
+                  <div key={stage.id} className="w-full shrink-0 px-1">
+                    <KanbanColumn stage={stage} leadCount={stageLeads.length}>
+                      <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                         {stageLeads.map((lead) => (
                           <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
                         ))}
@@ -304,20 +220,13 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
             </div>
           </div>
 
-                {/* Vista desktop: todas las columnas visibles sin scroll */}
-                <div className="hidden md:grid md:grid-cols-6 gap-4 h-[calc(100vh-280px)]">
+          {/* Desktop: all columns */}
+          <div className="hidden md:grid md:grid-cols-6 gap-3 h-[calc(100vh-240px)]">
             {STAGES.map((stage) => {
               const stageLeads = leads.filter((lead) => lead.stage === stage.id)
               return (
-                <KanbanColumn
-                  key={stage.id}
-                  stage={stage}
-                  leadCount={stageLeads.length}
-                >
-                  <SortableContext
-                    items={stageLeads.map((lead) => lead.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
+                <KanbanColumn key={stage.id} stage={stage} leadCount={stageLeads.length}>
+                  <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                     {stageLeads.map((lead) => (
                       <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
                     ))}
@@ -335,4 +244,3 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     </DndContext>
   )
 }
-

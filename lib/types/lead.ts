@@ -44,12 +44,22 @@ export const LEAD_SOURCES: Array<{ id: LeadSource; label: string }> = [
 /** Owners mock */
 export const MOCK_OWNERS = ['Carlos M.', 'Ana P.', 'Lucas R.', 'María G.']
 
-export const STAGES: Array<{ id: LeadStage; label: string; color: string }> = [
-  { id: 'entrante', label: 'Entrante', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  { id: 'primer-llamado', label: 'Primer Llamado', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  { id: 'seguimiento', label: 'Seguimiento', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { id: 'negociacion', label: 'Negociación', color: 'bg-purple-100 text-purple-800 border-purple-300' },
-  { id: 'ganado', label: 'Ganado', color: 'bg-green-100 text-green-800 border-green-300' },
-  { id: 'perdido', label: 'Perdido', color: 'bg-red-100 text-red-800 border-red-300' },
+export interface StageConfig {
+  id: LeadStage
+  label: string
+  color: string
+  /** Tailwind bg class for the small accent dot/indicator */
+  dot: string
+  /** Tailwind text class for count badge */
+  badge: string
+}
+
+export const STAGES: StageConfig[] = [
+  { id: 'entrante', label: 'Entrante', color: 'bg-blue-100 text-blue-800 border-blue-300', dot: 'bg-blue-500', badge: 'text-blue-700 bg-blue-50' },
+  { id: 'primer-llamado', label: 'Primer Llamado', color: 'bg-amber-100 text-amber-800 border-amber-300', dot: 'bg-amber-500', badge: 'text-amber-700 bg-amber-50' },
+  { id: 'seguimiento', label: 'Seguimiento', color: 'bg-orange-100 text-orange-800 border-orange-300', dot: 'bg-orange-500', badge: 'text-orange-700 bg-orange-50' },
+  { id: 'negociacion', label: 'Negociación', color: 'bg-violet-100 text-violet-800 border-violet-300', dot: 'bg-violet-500', badge: 'text-violet-700 bg-violet-50' },
+  { id: 'ganado', label: 'Ganado', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', dot: 'bg-emerald-500', badge: 'text-emerald-700 bg-emerald-50' },
+  { id: 'perdido', label: 'Perdido', color: 'bg-red-100 text-red-800 border-red-300', dot: 'bg-red-400', badge: 'text-red-600 bg-red-50' },
 ]
 

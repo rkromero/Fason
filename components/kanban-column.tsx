@@ -2,13 +2,11 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
+import type { StageConfig } from '@/lib/types/lead'
+import { Inbox } from 'lucide-react'
 
 interface KanbanColumnProps {
-  stage: {
-    id: string
-    label: string
-    color: string
-  }
+  stage: StageConfig
   leadCount: number
   children: React.ReactNode
 }
@@ -18,40 +16,48 @@ export function KanbanColumn({ stage, leadCount, children }: KanbanColumnProps) 
     id: stage.id,
   })
 
-  // Mapear colores Material Design
-  const getMaterialColor = (stageId: string) => {
-    const colorMap: Record<string, string> = {
-      'entrante': 'bg-blue-50 border-blue-200 text-blue-900',
-      'primer-llamado': 'bg-amber-50 border-amber-200 text-amber-900',
-      'seguimiento': 'bg-orange-50 border-orange-200 text-orange-900',
-      'negociacion': 'bg-purple-50 border-purple-200 text-purple-900',
-      'ganado': 'bg-green-50 border-green-200 text-green-900',
-      'perdido': 'bg-red-50 border-red-200 text-red-900',
-    }
-    return colorMap[stageId] || 'bg-gray-50 border-gray-200 text-gray-900'
-  }
+  const isEmpty = leadCount === 0
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'w-full h-full flex flex-col rounded-lg border transition-all duration-200 bg-white shadow-sm',
-        getMaterialColor(stage.id),
-        isOver && 'shadow-lg ring-2 ring-blue-400 ring-opacity-50'
+        'w-full h-full flex flex-col rounded-lg border border-gray-200/80 bg-white transition-all duration-150',
+        isOver && 'border-gray-400 ring-1 ring-gray-400/20 bg-gray-50/50'
       )}
     >
-      <div className="border-b bg-white/50 backdrop-blur-sm p-3 md:p-4 shrink-0">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-[1] border-b border-gray-100 bg-white px-3 py-2.5 shrink-0 rounded-t-lg">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium text-sm md:text-base text-gray-900 truncate">{stage.label}</h3>
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-gray-700 text-xs font-semibold shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={cn('crm-dot', stage.dot)} />
+            <h3 className="text-[13px] font-semibold text-gray-900 truncate">
+              {stage.label}
+            </h3>
+          </div>
+          <span className={cn(
+            'flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
+            stage.badge
+          )}>
             {leadCount}
           </span>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 bg-transparent">
-        <div className="flex flex-col gap-3 p-3">{children}</div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 mb-3">
+              <Inbox className="h-5 w-5 text-gray-400" />
+            </div>
+            <p className="text-[13px] text-gray-400 font-medium">Sin leads</p>
+            <p className="text-[11px] text-gray-300 mt-0.5">Arrastrá un lead aquí</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 p-2">{children}</div>
+        )}
       </div>
     </div>
   )
 }
-

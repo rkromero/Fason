@@ -1,10 +1,9 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, TrendingUp, Clock, Percent } from 'lucide-react'
 import { Lead } from '@/lib/types/lead'
+import { cn } from '@/lib/utils'
 
-// ─── Tipos ──────────────────────────────────────────────────────
 interface KpiCardsProps {
   leads: Lead[]
 }
@@ -13,16 +12,12 @@ interface KpiCardsProps {
 function calcAvgFirstContact(leads: Lead[]): string {
   const leadsWithFirst = leads.filter((l) => l.firstContactDate && l.createdAt)
   if (leadsWithFirst.length === 0) return '—'
-
   const totalHours = leadsWithFirst.reduce((sum, l) => {
     const created = new Date(l.createdAt).getTime()
     const firstContact = new Date(l.firstContactDate!).getTime()
-    const diffH = Math.max(0, (firstContact - created) / (1000 * 60 * 60))
-    return sum + diffH
+    return sum + Math.max(0, (firstContact - created) / (1000 * 60 * 60))
   }, 0)
-
   const avg = totalHours / leadsWithFirst.length
-
   if (avg < 1) return `${Math.round(avg * 60)}min`
   if (avg < 24) return `${avg.toFixed(1)}h`
   return `${(avg / 24).toFixed(1)}d`
@@ -33,9 +28,7 @@ interface KpiConfig {
   key: string
   label: string
   icon: typeof Users
-  iconBg: string
-  iconColor: string
-  valueColor: string
+  accent: string
   getValue: (leads: Lead[]) => string
 }
 
@@ -44,27 +37,21 @@ const KPI_CONFIG: KpiConfig[] = [
     key: 'total',
     label: 'Total Leads',
     icon: Users,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    valueColor: 'text-gray-900',
+    accent: 'text-blue-600 bg-blue-50',
     getValue: (leads) => String(leads.length),
   },
   {
     key: 'ganados',
     label: 'Ganados',
     icon: TrendingUp,
-    iconBg: 'bg-green-100',
-    iconColor: 'text-green-600',
-    valueColor: 'text-green-600',
+    accent: 'text-emerald-600 bg-emerald-50',
     getValue: (leads) => String(leads.filter((l) => l.stage === 'ganado').length),
   },
   {
     key: 'conversion',
-    label: 'Tasa Conversión',
+    label: 'Conversión',
     icon: Percent,
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-600',
-    valueColor: 'text-purple-600',
+    accent: 'text-violet-600 bg-violet-50',
     getValue: (leads) => {
       if (leads.length === 0) return '0%'
       const ganados = leads.filter((l) => l.stage === 'ganado').length
@@ -73,40 +60,37 @@ const KPI_CONFIG: KpiConfig[] = [
   },
   {
     key: 'avg-first-contact',
-    label: 'Prom. 1er Contacto',
+    label: '1er Contacto',
     icon: Clock,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    valueColor: 'text-amber-600',
+    accent: 'text-amber-600 bg-amber-50',
     getValue: (leads) => calcAvgFirstContact(leads),
   },
 ]
 
-// ─── Componente ─────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────────────────────
 export function KpiCards({ leads }: KpiCardsProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
       {KPI_CONFIG.map((kpi) => {
         const Icon = kpi.icon
+        const [iconText, iconBg] = kpi.accent.split(' ')
         return (
-          <Card
+          <div
             key={kpi.key}
-            className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden"
+            className="flex items-center gap-3 rounded-lg border border-gray-200/80 bg-white px-3 py-2.5 sm:px-4 sm:py-3"
           >
-            <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-2 px-3 pt-4 sm:pt-5">
-              <div className={`${kpi.iconBg} rounded-full p-2.5 sm:p-3 mb-2`}>
-                <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${kpi.iconColor}`} />
-              </div>
-              <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center leading-tight">
+            <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg shrink-0', iconBg)}>
+              <Icon className={cn('h-4 w-4', iconText)} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider truncate">
                 {kpi.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
-              <div className={`text-xl sm:text-2xl font-bold ${kpi.valueColor}`}>
+              </p>
+              <p className="text-lg font-semibold text-gray-900 leading-tight tabular-nums tracking-tight">
                 {kpi.getValue(leads)}
-              </div>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+          </div>
         )
       })}
     </div>

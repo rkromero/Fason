@@ -6,14 +6,12 @@ import { KanbanBoard } from '@/components/kanban-board'
 import { KanbanTopBar, KanbanFilters, DEFAULT_FILTERS } from '@/components/kanban-top-bar'
 import { KpiCards } from '@/components/kpi-cards'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Plus } from 'lucide-react'
+import { RefreshCw, Plus, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
 import { NewLeadDialog } from '@/components/new-lead-dialog'
 import { CRMSidebar } from '@/components/crm-sidebar'
 
 // ─── Mock enrichment ────────────────────────────────────────────
-// Llena los campos nuevos con datos mock cuando la API no los devuelve
 const MOCK_SOURCES: LeadSource[] = ['web', 'referido', 'redes', 'llamada', 'email', 'otro']
 const MOCK_PRIORITIES: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C']
 const MOCK_TAGS_POOL = ['urgente', 'VIP', 'recontactar', 'interesado', 'precio', 'muestra']
@@ -44,7 +42,6 @@ function enrichLead(lead: Lead): Lead {
 function applyFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
   let result = leads
 
-  // Search
   if (filters.search.trim()) {
     const q = filters.search.toLowerCase()
     result = result.filter((l) =>
@@ -56,18 +53,13 @@ function applyFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
     )
   }
 
-  // Quick filters
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   for (const qf of filters.quickFilters) {
     switch (qf) {
       case 'hoy':
-        result = result.filter((l) => {
-          const d = new Date(l.createdAt)
-          d.setHours(0, 0, 0, 0)
-          return d.getTime() === today.getTime()
-        })
+        result = result.filter((l) => { const d = new Date(l.createdAt); d.setHours(0, 0, 0, 0); return d.getTime() === today.getTime() })
         break
       case 'vencidos':
         result = result.filter((l) => l.nextTaskDate && new Date(l.nextTaskDate) < new Date())
@@ -81,36 +73,24 @@ function applyFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
     }
   }
 
-  // Dropdown filters
-  if (filters.source !== 'all') {
-    result = result.filter((l) => l.source === filters.source)
-  }
-  if (filters.producto !== 'all') {
-    result = result.filter((l) => l.producto === filters.producto)
-  }
-  if (filters.owner !== 'all') {
-    result = result.filter((l) => l.owner === filters.owner)
-  }
+  if (filters.source !== 'all') result = result.filter((l) => l.source === filters.source)
+  if (filters.producto !== 'all') result = result.filter((l) => l.producto === filters.producto)
+  if (filters.owner !== 'all') result = result.filter((l) => l.owner === filters.owner)
 
-  // Sort
   result = [...result].sort((a, b) => {
     switch (filters.sortOrder) {
       case 'ultima-actividad':
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       case 'proxima-tarea': {
-        const aDate = a.nextTaskDate ? new Date(a.nextTaskDate).getTime() : Infinity
-        const bDate = b.nextTaskDate ? new Date(b.nextTaskDate).getTime() : Infinity
-        return aDate - bDate
+        const aD = a.nextTaskDate ? new Date(a.nextTaskDate).getTime() : Infinity
+        const bD = b.nextTaskDate ? new Date(b.nextTaskDate).getTime() : Infinity
+        return aD - bD
       }
       case 'mayor-monto': {
-        const parseAmount = (s?: string) => {
-          if (!s) return 0
-          return Number(s.replace(/[^0-9.]/g, '')) || 0
-        }
-        return parseAmount(b.inversionEstimada) - parseAmount(a.inversionEstimada)
+        const parse = (s?: string) => s ? Number(s.replace(/[^0-9.]/g, '')) || 0 : 0
+        return parse(b.inversionEstimada) - parse(a.inversionEstimada)
       }
-      default:
-        return 0
+      default: return 0
     }
   })
 
@@ -129,18 +109,13 @@ function countActiveFilters(filters: KanbanFilters): number {
 
 // ─── Page ───────────────────────────────────────────────────────
 export default function CRMPage() {
-  const router = useRouter()
   const [rawLeads, setRawLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_FILTERS)
 
-  // Enrich leads con mock data
   const leads = useMemo(() => rawLeads.map(enrichLead), [rawLeads])
-
-  // Filtered leads
   const filteredLeads = useMemo(() => applyFilters(leads, filters), [leads, filters])
-
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters])
 
   const fetchLeads = async () => {
@@ -160,26 +135,19 @@ export default function CRMPage() {
     }
   }
 
-  useEffect(() => {
-    fetchLeads()
-  }, [])
+  useEffect(() => { fetchLeads() }, [])
 
   const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
     try {
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
-
       if (response.ok) {
         const data = await response.json()
-        setRawLeads((prevLeads) =>
-          prevLeads.map((lead) => (lead.id === leadId ? data.lead : lead))
-        )
-        toast.success('Lead actualizado correctamente')
+        setRawLeads((prev) => prev.map((lead) => (lead.id === leadId ? data.lead : lead)))
+        toast.success('Lead actualizado')
       } else {
         toast.error('Error al actualizar el lead')
       }
@@ -189,77 +157,75 @@ export default function CRMPage() {
     }
   }
 
+  // ─── Loading state ────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen crm-surface">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          <p className="text-sm text-gray-500 font-medium">Cargando leads…</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar - Solo visible en desktop */}
+    <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      {/* Main Content */}
       <div className="flex-1 md:ml-64">
-        {/* Header */}
-        <div className="bg-white sticky top-0 z-10 shadow-md border-b border-gray-200">
-          <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-5">
-            {/* Title row */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-gray-900 truncate">
-                  LEADS
+        {/* ─── Sticky header ───────────────────────────── */}
+        <div className="crm-header sticky top-0 z-10">
+          <div className="px-4 sm:px-6 py-3 sm:py-4">
+            {/* Row 1: Title + Actions */}
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">
+                  Leads
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-[12px] text-gray-500 mt-0.5 tabular-nums">
                   {filteredLeads.length === leads.length
-                    ? `${leads.length} leads en total`
+                    ? `${leads.length} leads`
                     : `${filteredLeads.length} de ${leads.length} leads`}
                 </p>
               </div>
-              <div className="flex gap-3 w-full sm:w-auto">
-                <Button
-                  onClick={() => setIsNewLeadDialogOpen(true)}
-                  size="default"
-                  className="w-full sm:w-auto shrink-0 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-md px-4 py-2 font-medium"
-                >
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Nuevo Lead</span>
-                  <span className="sm:hidden">Nuevo</span>
-                </Button>
+              <div className="flex items-center gap-2">
                 <Button
                   onClick={fetchLeads}
-                  variant="outline"
-                  size="default"
-                  className="w-full sm:w-auto shrink-0 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md px-4 py-2 font-medium"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  title="Actualizar"
                 >
-                  <RefreshCw className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Actualizar</span>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  onClick={() => setIsNewLeadDialogOpen(true)}
+                  size="sm"
+                  className="crm-btn-primary gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Nuevo Lead</span>
+                  <span className="sm:hidden">Nuevo</span>
                 </Button>
               </div>
             </div>
 
-            {/* KPI Cards */}
+            {/* Row 2: KPI cards */}
             <KpiCards leads={leads} />
           </div>
         </div>
 
-        {/* Kanban area */}
-        <div className="w-full px-4 sm:px-6 py-4 sm:py-6">
-          {/* Top Bar: búsqueda + filtros */}
+        {/* ─── Kanban area ─────────────────────────────── */}
+        <div className="px-4 sm:px-6 py-4">
           <KanbanTopBar
             filters={filters}
             onFiltersChange={setFilters}
             activeFilterCount={activeFilterCount}
           />
-
-          {/* Tablero Kanban */}
           <KanbanBoard leads={filteredLeads} onUpdateLead={handleUpdateLead} />
         </div>
 
-        {/* Dialog para nuevo lead */}
         <NewLeadDialog
           open={isNewLeadDialogOpen}
           onOpenChange={setIsNewLeadDialogOpen}
