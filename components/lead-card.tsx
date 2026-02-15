@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useState, useRef, useEffect } from 'react'
-import { LeadDetailsDialog } from './lead-details-dialog'
+import { LeadDrawer } from './lead-drawer'
 
 interface LeadCardProps {
   lead: Lead
@@ -357,7 +357,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead }: LeadC
         </div>
       </div>
 
-      <LeadDetailsDialog
+      <LeadDrawer
         lead={lead}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
