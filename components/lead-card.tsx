@@ -14,6 +14,7 @@ import {
   Clock,
   DollarSign,
   Building2,
+  Trash2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -22,6 +23,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useState, useRef, useEffect } from 'react'
 import { LeadDetailsDialog } from './lead-details-dialog'
@@ -30,6 +41,7 @@ interface LeadCardProps {
   lead: Lead
   isDragging?: boolean
   onUpdateLead?: (leadId: string, updates: Partial<Lead>) => void
+  onDeleteLead?: (leadId: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -93,8 +105,9 @@ function getVolumenLabel(volumen: string) {
 }
 
 // ─── Component ───────────────────────────────────────────────────
-export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
+export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const hasMovedRef = useRef(false)
   const clickStartTime = useRef<number | null>(null)
@@ -283,6 +296,18 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
                   <MessageCircle className="h-3.5 w-3.5 mr-2" />
                   WhatsApp
                 </DropdownMenuItem>
+                {onDeleteLead && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true) }}
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -338,6 +363,27 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
         onOpenChange={setIsDialogOpen}
         onUpdateLead={onUpdateLead}
       />
+
+      {/* Confirmación de eliminación */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que querés eliminar a <span className="font-semibold text-gray-900">{lead.nombre}</span> de <span className="font-semibold text-gray-900">{lead.empresa}</span>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-sm">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => onDeleteLead?.(lead.id)}
+              className="bg-red-600 text-white hover:bg-red-700 text-sm"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

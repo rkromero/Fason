@@ -21,9 +21,10 @@ import { cn } from '@/lib/utils'
 interface KanbanBoardProps {
   leads: Lead[]
   onUpdateLead: (leadId: string, updates: Partial<Lead>) => void
+  onDeleteLead: (leadId: string) => void
 }
 
-export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
+export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardProps) {
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
   const [currentStageIndex, setCurrentStageIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -210,7 +211,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
                     <KanbanColumn stage={stage} leadCount={stageLeads.length}>
                       <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                         {stageLeads.map((lead) => (
-                          <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
+                          <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} onDeleteLead={onDeleteLead} />
                         ))}
                       </SortableContext>
                     </KanbanColumn>
@@ -228,7 +229,7 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
                 <KanbanColumn key={stage.id} stage={stage} leadCount={stageLeads.length}>
                   <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                     {stageLeads.map((lead) => (
-                      <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
+                      <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} onDeleteLead={onDeleteLead} />
                     ))}
                   </SortableContext>
                 </KanbanColumn>

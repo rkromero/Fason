@@ -157,6 +157,21 @@ export default function CRMPage() {
     }
   }
 
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' })
+      if (response.ok) {
+        setRawLeads((prev) => prev.filter((lead) => lead.id !== leadId))
+        toast.success('Lead eliminado')
+      } else {
+        toast.error('Error al eliminar el lead')
+      }
+    } catch (error) {
+      console.error('Error al eliminar lead:', error)
+      toast.error('Error al eliminar el lead')
+    }
+  }
+
   // ─── Loading state ────────────────────────────────────
   if (loading) {
     return (
@@ -223,7 +238,7 @@ export default function CRMPage() {
             onFiltersChange={setFilters}
             activeFilterCount={activeFilterCount}
           />
-          <KanbanBoard leads={filteredLeads} onUpdateLead={handleUpdateLead} />
+          <KanbanBoard leads={filteredLeads} onUpdateLead={handleUpdateLead} onDeleteLead={handleDeleteLead} />
         </div>
 
         <NewLeadDialog
