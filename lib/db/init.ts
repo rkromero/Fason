@@ -93,6 +93,83 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_owner_id ON leads(owner_id)`)
     console.log('Tabla leads verificada')
 
+    // ─── Tabla accounts ─────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        nombre VARCHAR(255) NOT NULL,
+        empresa VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        telefono VARCHAR(50),
+        website VARCHAR(500),
+        industria VARCHAR(255),
+        notas TEXT,
+        owner_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_empresa ON accounts(empresa)`)
+    console.log('Tabla accounts verificada')
+
+    // ─── Tabla contacts ──────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id VARCHAR(255) PRIMARY KEY,
+        nombre VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        telefono VARCHAR(50),
+        cargo VARCHAR(255),
+        account_id VARCHAR(255) REFERENCES accounts(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id)`)
+    console.log('Tabla contacts verificada')
+
+    // ─── Migración leads: columnas de conversión ─────────────
+    const checkStatusCol = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'leads' AND column_name = 'status'
+      )
+    `)
+    if (!checkStatusCol.rows[0].exists) {
+      console.log('Agregando columna status a leads...')
+      await pool.query(`ALTER TABLE leads ADD COLUMN status VARCHAR(20) DEFAULT 'active'`)
+    }
+    const checkConvertedAtCol = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'leads' AND column_name = 'converted_at'
+      )
+    `)
+    if (!checkConvertedAtCol.rows[0].exists) {
+      console.log('Agregando columna converted_at a leads...')
+      await pool.query(`ALTER TABLE leads ADD COLUMN converted_at TIMESTAMP WITH TIME ZONE`)
+    }
+    const checkAccountIdCol = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'leads' AND column_name = 'account_id'
+      )
+    `)
+    if (!checkAccountIdCol.rows[0].exists) {
+      console.log('Agregando columna account_id a leads...')
+      await pool.query(`ALTER TABLE leads ADD COLUMN account_id VARCHAR(255) REFERENCES accounts(id) ON DELETE SET NULL`)
+    }
+    const checkContactIdCol = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'leads' AND column_name = 'contact_id'
+      )
+    `)
+    if (!checkContactIdCol.rows[0].exists) {
+      console.log('Agregando columna contact_id a leads...')
+      await pool.query(`ALTER TABLE leads ADD COLUMN contact_id VARCHAR(255) REFERENCES contacts(id) ON DELETE SET NULL`)
+    }
+
     // ─── Admin por defecto ───────────────────────────────────
     const adminEmail = 'rodolfor86@gmail.com'
     const checkAdmin = await pool.query(`SELECT id, password_hash FROM users WHERE email = $1`, [adminEmail])

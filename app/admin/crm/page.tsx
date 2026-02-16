@@ -8,9 +8,10 @@ import { LeadsListView } from '@/components/leads-list-view'
 import { KanbanTopBar, KanbanFilters, DEFAULT_FILTERS } from '@/components/kanban-top-bar'
 import { KpiCards, KpiCardsSkeleton } from '@/components/kpi-cards'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Plus, AlertTriangle, Inbox, LayoutGrid, List } from 'lucide-react'
+import { RefreshCw, Plus, AlertTriangle, Inbox, LayoutGrid, List, Archive } from 'lucide-react'
 import { toast } from 'sonner'
 import { NewLeadDialog } from '@/components/new-lead-dialog'
+import { ConvertLeadModal } from '@/components/convert-lead-modal'
 import { CRMSidebar } from '@/components/crm-sidebar'
 import { cn } from '@/lib/utils'
 
@@ -106,6 +107,9 @@ export default function CRMPage() {
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_FILTERS)
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
+  const [convertLead, setConvertLead] = useState<Lead | null>(null)
+  const [showConverted, setShowConverted] = useState(false)
+  const [convertedLeads, setConvertedLeads] = useState<Lead[]>([])
 
   const leads = useMemo(() => rawLeads.map(enrichLead), [rawLeads])
   const filteredLeads = useMemo(() => applyFilters(leads, filters), [leads, filters])
@@ -143,6 +147,15 @@ export default function CRMPage() {
   useEffect(() => { fetchLeads() }, [fetchLeads])
 
   const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
+    // Intercept: if moving to "ganado", open conversion modal
+    if (updates.stage === 'ganado') {
+      const lead = rawLeads.find((l) => l.id === leadId)
+      if (lead && lead.stage !== 'ganado') {
+        setConvertLead(lead)
+        return
+      }
+    }
+
     try {
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
@@ -160,6 +173,33 @@ export default function CRMPage() {
       console.error('Error al actualizar lead:', err)
       toast.error('Error al actualizar el lead')
     }
+  }
+
+  const handleLeadConverted = () => {
+    // Remove converted lead from active list
+    if (convertLead) {
+      setRawLeads((prev) => prev.filter((l) => l.id !== convertLead.id))
+    }
+    setConvertLead(null)
+    fetchLeads()
+  }
+
+  const fetchConvertedLeads = async () => {
+    try {
+      const res = await fetch('/api/leads?converted=true')
+      if (res.ok) {
+        const data = await res.json()
+        setConvertedLeads(data.leads || [])
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const toggleShowConverted = () => {
+    const next = !showConverted
+    setShowConverted(next)
+    if (next) fetchConvertedLeads()
   }
 
   const handleDeleteLead = async (leadId: string) => {
@@ -204,6 +244,21 @@ export default function CRMPage() {
                 </p>
               </div>
               <div className="flex items-center gap-1">
+                {/* Converted toggle */}
+                <button
+                  onClick={toggleShowConverted}
+                  className={cn(
+                    'flex items-center gap-1 h-8 px-2 rounded-md text-[11px] font-medium transition-colors',
+                    showConverted
+                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                      : 'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]'
+                  )}
+                  title="Ver leads convertidos"
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{showConverted ? 'Activos' : 'Convertidos'}</span>
+                </button>
+
                 {/* View mode toggle */}
                 <div className="flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden">
                   <button
@@ -299,8 +354,52 @@ export default function CRMPage() {
             </div>
           )}
 
+          {/* Converted leads view */}
+          {showConverted && !loading && !error && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Archive className="h-4 w-4 text-emerald-600" />
+                <h2 className="text-[14px] font-semibold text-[var(--crm-text)]">Leads convertidos</h2>
+                <span className="text-[11px] crm-mono text-[var(--crm-text-muted)]">({convertedLeads.length})</span>
+              </div>
+              {convertedLeads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)]">
+                    <Archive className="h-5 w-5 text-[var(--crm-text-muted)]" />
+                  </div>
+                  <p className="text-[13px] text-[var(--crm-text-muted)]">No hay leads convertidos aún</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {convertedLeads.map((lead) => (
+                    <div key={lead.id} className="bg-[var(--crm-bg-card)] border border-[var(--crm-border-light)] rounded-lg p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[var(--crm-text)] truncate">{lead.nombre}</p>
+                          <p className="text-[12px] text-[var(--crm-text-secondary)]">{lead.empresa}</p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                            Convertido
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-[var(--crm-text-muted)]">
+                        <span>{lead.email}</span>
+                        <span>{lead.telefono}</span>
+                        {lead.convertedAt && (
+                          <span>Convertido: {new Date(lead.convertedAt).toLocaleDateString('es-AR')}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Normal content */}
-          {!error && leads.length > 0 && (
+          {!error && leads.length > 0 && !showConverted && (
             <>
               <KanbanTopBar
                 filters={filters}
@@ -392,6 +491,13 @@ export default function CRMPage() {
           open={isNewLeadDialogOpen}
           onOpenChange={setIsNewLeadDialogOpen}
           onLeadCreated={fetchLeads}
+        />
+
+        <ConvertLeadModal
+          lead={convertLead}
+          open={!!convertLead}
+          onOpenChange={(open) => { if (!open) setConvertLead(null) }}
+          onConverted={handleLeadConverted}
         />
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserCog, BarChart3, Settings, Database, LogOut, MoreHorizontal, X } from 'lucide-react'
+import { LayoutDashboard, Users, UserCog, BarChart3, Settings, Database, LogOut, MoreHorizontal, X, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarItem {
@@ -14,6 +14,7 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { title: 'Leads', href: '/admin/crm', icon: Users },
+  { title: 'Cuentas', href: '/admin/cuentas', icon: Building2 },
   { title: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
   { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { title: 'Estadísticas', href: '/admin/estadisticas', icon: BarChart3 },
@@ -23,12 +24,13 @@ const sidebarItems: SidebarItem[] = [
 
 const bottomTabItems: SidebarItem[] = [
   { title: 'Leads', href: '/admin/crm', icon: Users },
+  { title: 'Cuentas', href: '/admin/cuentas', icon: Building2 },
   { title: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
-  { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { title: 'Stats', href: '/admin/estadisticas', icon: BarChart3 },
 ]
 
 const moreMenuItems: SidebarItem[] = [
+  { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { title: 'Base de Datos', href: '/admin/db', icon: Database },
   { title: 'Configuración', href: '/admin/configuracion', icon: Settings },
 ]

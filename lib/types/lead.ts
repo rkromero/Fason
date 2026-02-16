@@ -102,6 +102,10 @@ export interface Lead {
   fichaFason?: FichaFason
   lostReason?: LostReason
   lostNotes?: string
+  status?: 'active' | 'converted'
+  convertedAt?: string
+  accountId?: string
+  contactId?: string
 }
 
 /** Fuentes disponibles */

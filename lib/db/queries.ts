@@ -19,7 +19,11 @@ const LEAD_SELECT = `
   l.created_at as "createdAt",
   l.updated_at as "updatedAt",
   l.notes,
-  l.last_contact as "lastContact"
+  l.last_contact as "lastContact",
+  l.status,
+  l.converted_at as "convertedAt",
+  l.account_id as "accountId",
+  l.contact_id as "contactId"
 `
 
 const LEAD_FROM = `FROM leads l LEFT JOIN users u ON l.owner_id = u.id`
@@ -44,12 +48,26 @@ function mapRowToLead(row: any): Lead {
     updatedAt: row.updatedAt,
     notes: Array.isArray(row.notes) ? row.notes : (row.notes ? JSON.parse(row.notes) : []),
     lastContact: row.lastContact || undefined,
+    status: row.status || 'active',
+    convertedAt: row.convertedAt || undefined,
+    accountId: row.accountId || undefined,
+    contactId: row.contactId || undefined,
   }
 }
 
-// Obtener todos los leads
+// Obtener todos los leads (excluye convertidos por defecto)
 export async function getAllLeads(): Promise<Lead[]> {
-  const result = await pool.query(`SELECT ${LEAD_SELECT} ${LEAD_FROM} ORDER BY l.created_at DESC`)
+  const result = await pool.query(
+    `SELECT ${LEAD_SELECT} ${LEAD_FROM} WHERE (l.status IS NULL OR l.status = 'active') ORDER BY l.created_at DESC`
+  )
+  return result.rows.map(mapRowToLead)
+}
+
+// Obtener leads convertidos
+export async function getConvertedLeads(): Promise<Lead[]> {
+  const result = await pool.query(
+    `SELECT ${LEAD_SELECT} ${LEAD_FROM} WHERE l.status = 'converted' ORDER BY l.converted_at DESC`
+  )
   return result.rows.map(mapRowToLead)
 }
 
