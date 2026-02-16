@@ -1,8 +1,8 @@
 "use client"
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserCog, BarChart3, Settings, Database } from 'lucide-react'
+import { LayoutDashboard, Users, UserCog, BarChart3, Settings, Database, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarItem {
@@ -22,12 +22,19 @@ const sidebarItems: SidebarItem[] = [
 
 export function CRMSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 md:left-0 bg-[var(--crm-bg-card)] border-r border-[var(--crm-border)] z-20">
       {/* Logo/Header */}
       <div className="flex items-center justify-center h-14 px-4 border-b border-[var(--crm-border)]">
-        <h2 className="crm-title text-[16px]">CRM</h2>
+        <h2 className="crm-title text-[16px]">Fason CRM</h2>
       </div>
 
       {/* Navigation */}
@@ -56,8 +63,17 @@ export function CRMSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-[var(--crm-border)]">
-        <p className="crm-meta text-center">© 2024 CRM</p>
+      <div className="px-3 py-3 border-t border-[var(--crm-border)]">
+        <button
+          onClick={handleLogout}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-[var(--crm-radius-md)] text-[13px] font-medium w-full',
+            'text-[var(--crm-text-muted)] hover:bg-[var(--crm-danger-light)] hover:text-[var(--crm-danger)] transition-all'
+          )}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </aside>
   )

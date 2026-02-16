@@ -1,4 +1,5 @@
 import pool from '../db'
+import bcrypt from 'bcryptjs'
 import { User } from '@/lib/types/user'
 
 const SELECT_FIELDS = `
@@ -37,21 +38,22 @@ export async function getUserById(id: string): Promise<User | null> {
   return mapRow(result.rows[0])
 }
 
-export async function createUser(data: { nombre: string; email: string; telefono?: string; rol: string }): Promise<User> {
+export async function createUser(data: { nombre: string; email: string; telefono?: string; rol: string; password: string }): Promise<User> {
   const id = `usr-${Date.now()}`
   const now = new Date().toISOString()
+  const passwordHash = await bcrypt.hash(data.password, 12)
 
   const result = await pool.query(
-    `INSERT INTO users (id, nombre, email, telefono, rol, activo, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, true, $6, $6)
+    `INSERT INTO users (id, nombre, email, telefono, password_hash, rol, activo, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, true, $7, $7)
      RETURNING ${SELECT_FIELDS}`,
-    [id, data.nombre, data.email, data.telefono || null, data.rol, now]
+    [id, data.nombre, data.email, data.telefono || null, passwordHash, data.rol, now]
   )
 
   return mapRow(result.rows[0])
 }
 
-export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+export async function updateUser(id: string, updates: Partial<User> & { password?: string }): Promise<User | null> {
   const fields: string[] = []
   const values: any[] = []
   let p = 1
@@ -61,6 +63,11 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   if (updates.telefono !== undefined) { fields.push(`telefono = $${p++}`); values.push(updates.telefono || null) }
   if (updates.rol !== undefined) { fields.push(`rol = $${p++}`); values.push(updates.rol) }
   if (updates.activo !== undefined) { fields.push(`activo = $${p++}`); values.push(updates.activo) }
+  if (updates.password) {
+    const hash = await bcrypt.hash(updates.password, 12)
+    fields.push(`password_hash = $${p++}`)
+    values.push(hash)
+  }
 
   fields.push(`updated_at = $${p++}`)
   values.push(new Date().toISOString())
@@ -77,7 +84,6 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
-  // Desasignar leads del usuario antes de borrar
   await pool.query(`UPDATE leads SET owner_id = NULL, updated_at = $1 WHERE owner_id = $2`, [new Date().toISOString(), id])
   const result = await pool.query('DELETE FROM users WHERE id = $1', [id])
   return result.rowCount !== null && result.rowCount > 0

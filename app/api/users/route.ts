@@ -17,13 +17,17 @@ export async function POST(request: Request) {
   try {
     await ensureDatabaseInitialized()
     const body = await request.json()
-    const { nombre, email, telefono, rol } = body
+    const { nombre, email, telefono, rol, password } = body
 
-    if (!nombre || !email) {
-      return NextResponse.json({ error: 'Nombre y email son requeridos' }, { status: 400 })
+    if (!nombre || !email || !password) {
+      return NextResponse.json({ error: 'Nombre, email y contraseña son requeridos' }, { status: 400 })
     }
 
-    const user = await createUser({ nombre, email, telefono, rol: rol || 'vendedor' })
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
+    }
+
+    const user = await createUser({ nombre, email, telefono, rol: rol || 'vendedor', password })
     return NextResponse.json({ user }, { status: 201 })
   } catch (error: any) {
     console.error('Error al crear usuario:', error)

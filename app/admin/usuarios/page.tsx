@@ -30,6 +30,7 @@ export default function UsuariosPage() {
   const [formEmail, setFormEmail] = useState('')
   const [formTelefono, setFormTelefono] = useState('')
   const [formRol, setFormRol] = useState<UserRole>('vendedor')
+  const [formPassword, setFormPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   // Delete confirmation
@@ -63,6 +64,7 @@ export default function UsuariosPage() {
     setFormEmail('')
     setFormTelefono('')
     setFormRol('vendedor')
+    setFormPassword('')
     setShowDialog(true)
   }
 
@@ -72,6 +74,7 @@ export default function UsuariosPage() {
     setFormEmail(user.email)
     setFormTelefono(user.telefono || '')
     setFormRol(user.rol)
+    setFormPassword('')
     setShowDialog(true)
   }
 
@@ -80,14 +83,24 @@ export default function UsuariosPage() {
       toast.error('Nombre y email son requeridos')
       return
     }
+    if (!editingUser && !formPassword) {
+      toast.error('La contraseña es requerida')
+      return
+    }
+    if (formPassword && formPassword.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
 
     setSubmitting(true)
     try {
       if (editingUser) {
+        const body: any = { nombre: formNombre, email: formEmail, telefono: formTelefono || undefined, rol: formRol }
+        if (formPassword) body.password = formPassword
         const res = await fetch(`/api/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre: formNombre, email: formEmail, telefono: formTelefono || undefined, rol: formRol }),
+          body: JSON.stringify(body),
         })
         if (res.ok) {
           const data = await res.json()
@@ -101,7 +114,7 @@ export default function UsuariosPage() {
         const res = await fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre: formNombre, email: formEmail, telefono: formTelefono || undefined, rol: formRol }),
+          body: JSON.stringify({ nombre: formNombre, email: formEmail, telefono: formTelefono || undefined, rol: formRol, password: formPassword }),
         })
         if (res.ok) {
           const data = await res.json()
@@ -321,6 +334,18 @@ export default function UsuariosPage() {
             <div className="space-y-1.5">
               <label className="crm-label">Teléfono</label>
               <Input value={formTelefono} onChange={(e) => setFormTelefono(e.target.value)} placeholder="+54 11 1234-5678" disabled={submitting} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="crm-label">
+                Contraseña {!editingUser && <span className="text-red-500">*</span>}
+              </label>
+              <Input
+                type="password"
+                value={formPassword}
+                onChange={(e) => setFormPassword(e.target.value)}
+                placeholder={editingUser ? 'Dejar vacío para no cambiar' : 'Mínimo 6 caracteres'}
+                disabled={submitting}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="crm-label">Rol</label>

@@ -14,6 +14,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
+    if (body.password && body.password.length < 6) {
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
+    }
+
     const updated = await updateUser(id, body)
     if (!updated) {
       return NextResponse.json({ error: 'Error al actualizar el usuario' }, { status: 500 })
