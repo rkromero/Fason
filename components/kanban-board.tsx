@@ -236,16 +236,16 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
           </div>
         </div>
 
-        {/* ─── Desktop: horizontal scroll columns ────── */}
-        <div className="hidden md:block overflow-x-auto scrollbar-hide pb-2">
+        {/* ─── Desktop: grid columns (fit to screen) ────── */}
+        <div className="hidden md:block pb-2">
           <div
-            className="flex gap-3"
-            style={{ height: 'calc(100vh - 260px)', minWidth: 'max-content' }}
+            className="grid grid-cols-6 gap-3"
+            style={{ height: 'calc(100vh - 260px)' }}
           >
             {STAGES.map((stage) => {
               const stageLeads = leadsByStage[stage.id] || []
               return (
-                <div key={stage.id} style={{ width: 'var(--crm-col-width)', minWidth: 'var(--crm-col-width)' }} className="shrink-0 h-full">
+                <div key={stage.id} className="h-full min-w-0">
                   <KanbanColumn
                     stage={stage}
                     leadCount={stageLeads.length}
