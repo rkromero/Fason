@@ -12,45 +12,25 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  {
-    title: 'LEADS',
-    href: '/admin/crm',
-    icon: Users,
-  },
-  {
-    title: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Estadísticas',
-    href: '/admin/estadisticas',
-    icon: BarChart3,
-  },
-  {
-    title: 'Base de Datos',
-    href: '/admin/db',
-    icon: Database,
-  },
-  {
-    title: 'Configuración',
-    href: '/admin/configuracion',
-    icon: Settings,
-  },
+  { title: 'LEADS', href: '/admin/crm', icon: Users },
+  { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+  { title: 'Estadísticas', href: '/admin/estadisticas', icon: BarChart3 },
+  { title: 'Base de Datos', href: '/admin/db', icon: Database },
+  { title: 'Configuración', href: '/admin/configuracion', icon: Settings },
 ]
 
 export function CRMSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 md:left-0 bg-white border-r border-gray-200 shadow-sm z-20">
+    <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 md:left-0 bg-[var(--crm-bg-card)] border-r border-[var(--crm-border)] z-20">
       {/* Logo/Header */}
-      <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200 bg-gray-50">
-        <h2 className="text-lg font-semibold text-gray-900">CRM</h2>
+      <div className="flex items-center justify-center h-14 px-4 border-b border-[var(--crm-border)]">
+        <h2 className="crm-title text-[16px]">CRM</h2>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {sidebarItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -60,19 +40,14 @@ export function CRMSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
-                'hover:bg-gray-100 active:scale-95',
+                'flex items-center gap-3 px-3 py-2.5 rounded-[var(--crm-radius-md)] text-[13px] font-medium',
+                'transition-all duration-[var(--crm-transition)] crm-focus-ring',
                 isActive
-                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 shadow-sm'
-                  : 'text-gray-700 hover:text-gray-900'
+                  ? 'bg-[var(--crm-bg-active)] text-[var(--crm-text)] shadow-[var(--crm-shadow-xs)]'
+                  : 'text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)] hover:text-[var(--crm-text)] active:scale-[0.98]'
               )}
             >
-              <Icon
-                className={cn(
-                  'h-5 w-5 shrink-0',
-                  isActive ? 'text-blue-600' : 'text-gray-500'
-                )}
-              />
+              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-[var(--crm-text)]' : 'text-[var(--crm-text-muted)]')} />
               <span>{item.title}</span>
             </Link>
           )
@@ -80,12 +55,9 @@ export function CRMSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500 text-center">
-          © 2024 CRM
-        </p>
+      <div className="px-4 py-3 border-t border-[var(--crm-border)]">
+        <p className="crm-meta text-center">© 2024 CRM</p>
       </div>
     </aside>
   )
 }
-

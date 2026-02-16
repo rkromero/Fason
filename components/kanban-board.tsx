@@ -6,6 +6,7 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  DragOverEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -17,15 +18,20 @@ import { LeadCard } from './lead-card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { DensityMode } from '@/lib/types/lead'
 
 interface KanbanBoardProps {
   leads: Lead[]
   onUpdateLead: (leadId: string, updates: Partial<Lead>) => void
   onDeleteLead: (leadId: string) => void
+  onQuickAdd?: (stageId: string) => void
+  density?: DensityMode
+  isLoading?: boolean
 }
 
-export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardProps) {
+export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, density = 'comfortable', isLoading }: KanbanBoardProps) {
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
+  const [overColumnId, setOverColumnId] = useState<string | null>(null)
   const [currentStageIndex, setCurrentStageIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
@@ -44,9 +50,20 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
     setActiveLead(lead || null)
   }
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event
+    if (over) {
+      const isStage = STAGES.some((s) => s.id === over.id)
+      setOverColumnId(isStage ? (over.id as string) : null)
+    } else {
+      setOverColumnId(null)
+    }
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveLead(null)
+    setOverColumnId(null)
     if (!over) return
     const leadId = active.id as string
     const newStage = over.id as LeadStage
@@ -131,11 +148,15 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
   }, [goToNextStage, goToPreviousStage])
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="relative">
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="relative flex-1">
         {/* ─── Mobile navigation ─────────────────────────── */}
         <div className="md:hidden mb-3">
-          {/* Stage tabs */}
           <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-hide">
             {STAGES.map((stage, index) => {
               const count = leads.filter((l) => l.stage === stage.id).length
@@ -145,18 +166,16 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
                   key={stage.id}
                   onClick={() => goToStage(index)}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium whitespace-nowrap transition-all border',
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--crm-radius-md)] text-[12px] font-medium whitespace-nowrap border crm-focus-ring',
+                    'transition-all duration-[var(--crm-transition)]',
                     isActive
-                      ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      ? 'bg-[var(--crm-primary)] text-white border-[var(--crm-primary)] shadow-sm'
+                      : 'bg-[var(--crm-bg-card)] text-[var(--crm-text-secondary)] border-[var(--crm-border)] hover:bg-[var(--crm-bg-hover)]'
                   )}
                 >
                   <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', isActive ? 'bg-white' : stage.dot)} />
                   {stage.label}
-                  <span className={cn(
-                    'text-[10px] font-bold tabular-nums ml-0.5',
-                    isActive ? 'text-gray-300' : 'text-gray-400'
-                  )}>
+                  <span className={cn('text-[10px] font-bold crm-mono ml-0.5', isActive ? 'text-white/60' : 'text-[var(--crm-text-muted)]')}>
                     {count}
                   </span>
                 </button>
@@ -164,13 +183,12 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
             })}
           </div>
 
-          {/* Nav buttons + dots */}
           <div className="flex items-center justify-center gap-3 mt-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={goToPreviousStage}
-              className="h-7 w-7 p-0 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="h-7 w-7 p-0 rounded-[var(--crm-radius-md)] text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -180,7 +198,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
                   key={index}
                   className={cn(
                     'h-1 rounded-full transition-all duration-200',
-                    currentStageIndex === index ? 'w-4 bg-gray-900' : 'w-1 bg-gray-300'
+                    currentStageIndex === index ? 'w-4 bg-[var(--crm-primary)]' : 'w-1 bg-[var(--crm-border)]'
                   )}
                 />
               ))}
@@ -189,7 +207,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
               variant="ghost"
               size="sm"
               onClick={goToNextStage}
-              className="h-7 w-7 p-0 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="h-7 w-7 p-0 rounded-[var(--crm-radius-md)] text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -197,7 +215,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
         </div>
 
         {/* ─── Columns container ─────────────────────────── */}
-        <div ref={containerRef} className="relative">
+        <div ref={containerRef} className="relative flex-1">
           {/* Mobile: one column at a time */}
           <div className="md:hidden overflow-hidden" style={{ touchAction: 'none' }}>
             <div
@@ -208,10 +226,15 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
                 const stageLeads = leads.filter((lead) => lead.stage === stage.id)
                 return (
                   <div key={stage.id} className="w-full shrink-0 px-1">
-                    <KanbanColumn stage={stage} leadCount={stageLeads.length}>
+                    <KanbanColumn
+                      stage={stage}
+                      leadCount={stageLeads.length}
+                      isOver={overColumnId === stage.id}
+                      onQuickAdd={onQuickAdd}
+                    >
                       <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                         {stageLeads.map((lead) => (
-                          <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} onDeleteLead={onDeleteLead} />
+                          <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} onDeleteLead={onDeleteLead} density={density} />
                         ))}
                       </SortableContext>
                     </KanbanColumn>
@@ -221,26 +244,38 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead }: KanbanBoardPr
             </div>
           </div>
 
-          {/* Desktop: all columns */}
-          <div className="hidden md:grid md:grid-cols-6 gap-3 h-[calc(100vh-240px)]">
-            {STAGES.map((stage) => {
-              const stageLeads = leads.filter((lead) => lead.stage === stage.id)
-              return (
-                <KanbanColumn key={stage.id} stage={stage} leadCount={stageLeads.length}>
-                  <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-                    {stageLeads.map((lead) => (
-                      <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} onDeleteLead={onDeleteLead} />
-                    ))}
-                  </SortableContext>
-                </KanbanColumn>
-              )
-            })}
+          {/* Desktop: horizontal scroll with fixed-width columns */}
+          <div className="hidden md:block overflow-x-auto scrollbar-hide pb-2">
+            <div
+              className="flex gap-3"
+              style={{ height: 'calc(100vh - 260px)', minWidth: 'max-content' }}
+            >
+              {STAGES.map((stage) => {
+                const stageLeads = leads.filter((lead) => lead.stage === stage.id)
+                return (
+                  <div key={stage.id} style={{ width: 'var(--crm-col-width)', minWidth: 'var(--crm-col-width)' }} className="shrink-0 h-full">
+                    <KanbanColumn
+                      stage={stage}
+                      leadCount={stageLeads.length}
+                      isOver={overColumnId === stage.id}
+                      onQuickAdd={onQuickAdd}
+                    >
+                      <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+                        {stageLeads.map((lead) => (
+                          <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} onDeleteLead={onDeleteLead} density={density} />
+                        ))}
+                      </SortableContext>
+                    </KanbanColumn>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      <DragOverlay>
-        {activeLead && <LeadCard lead={activeLead} isDragging />}
+      <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+        {activeLead && <LeadCard lead={activeLead} isDragging density={density} />}
       </DragOverlay>
     </DndContext>
   )

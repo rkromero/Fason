@@ -1,5 +1,7 @@
 export type LeadStage = 'entrante' | 'primer-llamado' | 'seguimiento' | 'negociacion' | 'ganado' | 'perdido'
 
+export type DensityMode = 'compact' | 'comfortable'
+
 export type LeadPriority = 'A' | 'B' | 'C'
 
 export type LeadSource = 'web' | 'referido' | 'redes' | 'llamada' | 'email' | 'otro'
