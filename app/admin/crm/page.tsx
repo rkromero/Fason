@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Lead, LeadSource, LeadTask, TaskType, MOCK_OWNERS, DensityMode } from '@/lib/types/lead'
+import { Lead, LeadSource, LeadTask, TaskType, MOCK_OWNERS } from '@/lib/types/lead'
 import { KanbanBoard } from '@/components/kanban-board'
+import { LeadsListView } from '@/components/leads-list-view'
 import { KanbanTopBar, KanbanFilters, DEFAULT_FILTERS } from '@/components/kanban-top-bar'
 import { KpiCards, KpiCardsSkeleton } from '@/components/kpi-cards'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Plus, Loader2, AlertTriangle, Inbox, LayoutGrid, List } from 'lucide-react'
+import { RefreshCw, Plus, AlertTriangle, Inbox, LayoutGrid, List } from 'lucide-react'
 import { toast } from 'sonner'
 import { NewLeadDialog } from '@/components/new-lead-dialog'
 import { CRMSidebar } from '@/components/crm-sidebar'
@@ -141,7 +142,7 @@ export default function CRMPage() {
   const [error, setError] = useState<string | null>(null)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
   const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_FILTERS)
-  const [density, setDensity] = useState<DensityMode>('comfortable')
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
 
   const leads = useMemo(() => rawLeads.map(enrichLead), [rawLeads])
   const filteredLeads = useMemo(() => applyFilters(leads, filters), [leads, filters])
@@ -211,7 +212,7 @@ export default function CRMPage() {
   }
 
   return (
-    <div className={cn('min-h-screen crm-surface flex', density === 'compact' ? 'crm-density-compact' : 'crm-density-comfortable')}>
+    <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
@@ -233,29 +234,29 @@ export default function CRMPage() {
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
-                {/* Density toggle */}
-                <div className="hidden sm:flex items-center rounded-md border border-[var(--crm-border)] overflow-hidden">
+                {/* View mode toggle */}
+                <div className="hidden sm:flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden">
                   <button
-                    onClick={() => setDensity('comfortable')}
+                    onClick={() => setViewMode('kanban')}
                     className={cn(
                       'flex items-center justify-center h-8 w-8 transition-colors',
-                      density === 'comfortable'
+                      viewMode === 'kanban'
                         ? 'bg-[var(--crm-bg-active)] text-[var(--crm-text)]'
                         : 'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]'
                     )}
-                    title="Vista cómoda"
+                    title="Vista Kanban"
                   >
                     <LayoutGrid className="h-3.5 w-3.5" />
                   </button>
                   <button
-                    onClick={() => setDensity('compact')}
+                    onClick={() => setViewMode('list')}
                     className={cn(
                       'flex items-center justify-center h-8 w-8 border-l border-[var(--crm-border)] transition-colors',
-                      density === 'compact'
+                      viewMode === 'list'
                         ? 'bg-[var(--crm-bg-active)] text-[var(--crm-text)]'
                         : 'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]'
                     )}
-                    title="Vista compacta"
+                    title="Vista Lista"
                   >
                     <List className="h-3.5 w-3.5" />
                   </button>
@@ -351,14 +352,20 @@ export default function CRMPage() {
                     Limpiar filtros
                   </Button>
                 </div>
-              ) : (
+              ) : viewMode === 'kanban' ? (
                 <KanbanBoard
                   leads={filteredLeads}
                   onUpdateLead={handleUpdateLead}
                   onDeleteLead={handleDeleteLead}
                   onQuickAdd={handleQuickAdd}
-                  density={density}
+                  density="comfortable"
                   isLoading={loading}
+                />
+              ) : (
+                <LeadsListView
+                  leads={filteredLeads}
+                  onUpdateLead={handleUpdateLead}
+                  onDeleteLead={handleDeleteLead}
                 />
               )}
             </>
