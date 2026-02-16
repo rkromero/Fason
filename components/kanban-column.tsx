@@ -22,6 +22,8 @@ export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOve
   return (
     <div
       ref={setNodeRef}
+      role="region"
+      aria-label={`Columna ${stage.label} — ${leadCount} leads`}
       className={cn(
         'w-full h-full flex flex-col rounded-[var(--crm-radius-lg)] border bg-[var(--crm-bg-card)] overflow-hidden',
         'transition-all duration-[var(--crm-transition)]',
@@ -56,6 +58,7 @@ export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOve
                   'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
                   'transition-all duration-[var(--crm-transition-fast)] crm-focus-ring'
                 )}
+                aria-label={`Agregar lead a ${stage.label}`}
                 title="Agregar lead"
               >
                 <Plus className="h-3.5 w-3.5" />

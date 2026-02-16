@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 import {
   Mail, Phone, Building2, MessageCircle, Send, CalendarCheck, FileText,
   Plus, Pencil, Check, X, PhoneCall, MailOpen, Clock, AlertCircle,
-  Package, CheckSquare, Square, ChevronRight, Trash2,
+  Package, CheckSquare, Square, ChevronRight, Trash2, Loader2,
 } from 'lucide-react'
 
 interface LeadDrawerProps {
@@ -334,7 +334,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col overflow-hidden">
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col overflow-hidden" aria-label={`Detalle del lead: ${lead.nombre}`}>
         {/* Header */}
         <SheetHeader className="px-3 sm:px-5 pt-3 sm:pt-5 pb-2 sm:pb-3 border-b border-[var(--crm-border-light)] shrink-0">
           <div className="flex items-start gap-2 sm:gap-3">
@@ -546,7 +546,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
               </div>
 
               {showTaskForm && (
-                <div className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] bg-[var(--crm-bg-subtle)] p-3 space-y-2">
+                <fieldset disabled={isUpdating} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] bg-[var(--crm-bg-subtle)] p-3 space-y-2">
                   <div className="flex gap-2">
                     <Select value={taskType} onValueChange={(v) => setTaskType(v as TaskType)}>
                       <SelectTrigger className="h-8 w-[130px] text-[12px] border-[var(--crm-border)]"><SelectValue /></SelectTrigger>
@@ -554,15 +554,15 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                         {TASK_TYPES.map((t) => <SelectItem key={t.id} value={t.id}><span>{t.emoji} {t.label}</span></SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <input type="date" value={taskDate} onChange={(e) => setTaskDate(e.target.value)} className="crm-input flex-1" />
+                    <input type="date" value={taskDate} onChange={(e) => setTaskDate(e.target.value)} className="crm-input flex-1" aria-label="Fecha de la tarea" />
                   </div>
-                  <input type="text" placeholder="Descripción…" value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} className="crm-input w-full" />
-                  <input type="text" placeholder="Notas (opcional)" value={taskNotes} onChange={(e) => setTaskNotes(e.target.value)} className="crm-input w-full" />
+                  <input type="text" placeholder="Descripción…" value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} className="crm-input w-full" aria-label="Descripción de la tarea" />
+                  <input type="text" placeholder="Notas (opcional)" value={taskNotes} onChange={(e) => setTaskNotes(e.target.value)} className="crm-input w-full" aria-label="Notas de la tarea" />
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setShowTaskForm(false)} className="crm-btn-secondary text-[12px]">Cancelar</button>
-                    <button onClick={handleAddTask} disabled={isUpdating} className="crm-btn-primary text-[12px] gap-1"><Plus className="h-3 w-3" /> Crear</button>
+                    <button onClick={handleAddTask} className="crm-btn-primary text-[12px] gap-1"><Plus className="h-3 w-3" /> Crear</button>
                   </div>
-                </div>
+                </fieldset>
               )}
 
               {!tasksLoaded && (
@@ -639,7 +639,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                   <Plus className="h-3.5 w-3.5 text-[var(--crm-text-muted)]" />
                 </div>
                 <div className="flex-1 space-y-1.5">
-                  <Textarea value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Agregar nota…" rows={2} className="text-[13px] min-h-[60px] resize-none border-[var(--crm-border)] rounded-[var(--crm-radius-md)] focus:ring-2 focus:ring-[var(--crm-primary)]/5 focus:border-[var(--crm-border-focus)]" />
+                  <Textarea value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Agregar nota…" rows={2} disabled={isUpdating} aria-label="Nueva nota" className="text-[13px] min-h-[60px] resize-none border-[var(--crm-border)] rounded-[var(--crm-radius-md)] focus:ring-2 focus:ring-[var(--crm-primary)]/5 focus:border-[var(--crm-border-focus)]" />
                   <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim() || isUpdating} className="crm-btn-primary h-7 text-[12px] gap-1">
                     <Send className="h-3 w-3" /> Agregar
                   </Button>
@@ -684,7 +684,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
           {/* ═══ FICHA FASON ═══ */}
           {tab === 'ficha' && (
-            <div className="px-3 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
+            <fieldset disabled={isUpdating} className="px-3 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Package className="h-4 w-4 text-[var(--crm-text-muted)]" />
                 <span className="crm-label">Ficha de producción</span>
@@ -742,15 +742,15 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
               </div>
 
               <Button onClick={handleSaveFicha} disabled={isUpdating} className="crm-btn-primary w-full gap-2 mt-2">
-                <Check className="h-3.5 w-3.5" /> Guardar ficha
+                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Guardar ficha
               </Button>
-            </div>
+            </fieldset>
           )}
         </div>
 
         {/* Lost reason dialog */}
         {showLostDialog && (
-          <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30">
+          <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-label="Motivo de pérdida">
             <div className="bg-[var(--crm-bg-card)] rounded-t-xl sm:rounded-xl w-full sm:max-w-sm p-5 space-y-3 shadow-xl m-0 sm:m-4">
               <h3 className="crm-title text-[15px]">Motivo de pérdida</h3>
               <p className="crm-body">¿Por qué se perdió este lead?</p>

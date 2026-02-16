@@ -82,6 +82,36 @@ export async function createAccount(data: {
   }
 }
 
+// ─── Update account ─────────────────────────────────────────────
+
+export async function updateAccount(id: string, data: Partial<{
+  nombre: string; empresa: string; cuit: string; email: string; telefono: string;
+  website: string; industria: string; notas: string; ownerId: string
+}>): Promise<Account | null> {
+  const fields: string[] = []
+  const values: any[] = []
+  let idx = 1
+
+  if (data.nombre !== undefined) { fields.push(`nombre = $${idx++}`); values.push(data.nombre) }
+  if (data.empresa !== undefined) { fields.push(`empresa = $${idx++}`); values.push(data.empresa) }
+  if (data.cuit !== undefined) { fields.push(`cuit = $${idx++}`); values.push(data.cuit || null) }
+  if (data.email !== undefined) { fields.push(`email = $${idx++}`); values.push(data.email || null) }
+  if (data.telefono !== undefined) { fields.push(`telefono = $${idx++}`); values.push(data.telefono || null) }
+  if (data.website !== undefined) { fields.push(`website = $${idx++}`); values.push(data.website || null) }
+  if (data.industria !== undefined) { fields.push(`industria = $${idx++}`); values.push(data.industria || null) }
+  if (data.notas !== undefined) { fields.push(`notas = $${idx++}`); values.push(data.notas || null) }
+  if (data.ownerId !== undefined) { fields.push(`owner_id = $${idx++}`); values.push(data.ownerId || null) }
+
+  if (fields.length === 0) return getAccountById(id)
+
+  fields.push(`updated_at = $${idx++}`)
+  values.push(new Date().toISOString())
+  values.push(id)
+
+  await pool.query(`UPDATE accounts SET ${fields.join(', ')} WHERE id = $${idx}`, values)
+  return getAccountById(id)
+}
+
 // ─── Duplicate detection (optimized: single UNION ALL query) ─────
 
 export async function findDuplicateAccounts(data: {

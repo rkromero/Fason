@@ -41,6 +41,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useState, useRef, useEffect, memo, useMemo } from 'react'
 import { LeadDrawer } from './lead-drawer'
 import type { DensityMode } from '@/lib/types/lead'
@@ -202,12 +203,12 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '').replace(/\D/g, '')
-    if (!cleanPhone || cleanPhone.length < 8) { alert('Número de teléfono inválido'); return }
+    if (!cleanPhone || cleanPhone.length < 8) { toast.error('Número de teléfono inválido'); return }
     if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1)
     if (!cleanPhone.startsWith('54') && !cleanPhone.match(/^[1-9]\d{1,2}/)) {
       if (cleanPhone.length <= 10) cleanPhone = `54${cleanPhone}`
     }
-    if (cleanPhone.length < 10) { alert('Número de teléfono inválido'); return }
+    if (cleanPhone.length < 10) { toast.error('Número de teléfono inválido'); return }
     window.open(`https://wa.me/${cleanPhone}`, '_blank')
   }
 
@@ -223,7 +224,7 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
 
   return (
     <>
-      <div ref={setNodeRef} style={style} className="w-full">
+      <div ref={setNodeRef} style={style} className="w-full" role="article" aria-label={`Lead: ${lead.nombre} — ${lead.empresa}`}>
         <div
           className={cn(
             'group relative rounded-[var(--crm-radius-md)] border bg-[var(--crm-bg-card)]',
@@ -249,6 +250,9 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
             {!isMobile && (
               <div
                 data-drag-handle
+                role="button"
+                aria-label={`Mover lead ${lead.nombre}`}
+                tabIndex={0}
                 className="cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-opacity -ml-1"
                 {...attributes}
                 {...listeners}

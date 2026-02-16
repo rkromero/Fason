@@ -8,6 +8,7 @@ import {
   DragStartEvent,
   DragOverEvent,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -38,7 +39,8 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 3 },
-    })
+    }),
+    useSensor(KeyboardSensor)
   )
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -146,10 +148,10 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="relative flex-1">
+      <div className="relative flex-1" role="region" aria-label="Tablero Kanban">
         {/* ─── Mobile: Stage tabs (scrollable pills) ──── */}
         <div className="md:hidden mb-2">
-          <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide -mx-1 px-1">
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide -mx-1 px-1" role="tablist" aria-label="Etapas del pipeline">
             {STAGES.map((stage, index) => {
               const count = (leadsByStage[stage.id] || []).length
               const isActive = currentStageIndex === index

@@ -51,7 +51,7 @@ export function CRMSidebar() {
   return (
     <>
       {/* ─── Mobile bottom tab bar ─── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--crm-bg-card)] border-t border-[var(--crm-border)] safe-area-bottom">
+      <nav aria-label="Navegación principal" className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--crm-bg-card)] border-t border-[var(--crm-border)] safe-area-bottom">
         <div className="flex items-stretch">
           {bottomTabItems.map((item) => {
             const Icon = item.icon
@@ -170,7 +170,7 @@ export function CRMSidebar() {
           <h2 className="crm-title text-[16px]">Fason CRM</h2>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav aria-label="Menú lateral" className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {sidebarItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href

@@ -181,6 +181,12 @@ export default function CRMPage() {
       }
     }
 
+    // Optimistic update: apply changes immediately
+    const previousLeads = rawLeads
+    setRawLeads((prev) => prev.map((lead) =>
+      lead.id === leadId ? { ...lead, ...updates } : lead
+    ))
+
     try {
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
@@ -190,12 +196,14 @@ export default function CRMPage() {
       if (response.ok) {
         const data = await response.json()
         setRawLeads((prev) => prev.map((lead) => (lead.id === leadId ? data.lead : lead)))
-        toast.success('Lead actualizado')
       } else {
+        // Rollback on error
+        setRawLeads(previousLeads)
         toast.error('Error al actualizar el lead')
       }
     } catch (err) {
       console.error('Error al actualizar lead:', err)
+      setRawLeads(previousLeads)
       toast.error('Error al actualizar el lead')
     }
   }
@@ -225,16 +233,44 @@ export default function CRMPage() {
   }
 
   const handleDeleteLead = async (leadId: string) => {
+    const deletedLead = rawLeads.find((l) => l.id === leadId)
+    // Optimistic: remove immediately
+    setRawLeads((prev) => prev.filter((lead) => lead.id !== leadId))
+
     try {
       const response = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' })
       if (response.ok) {
-        setRawLeads((prev) => prev.filter((lead) => lead.id !== leadId))
-        toast.success('Lead eliminado')
+        toast('Lead eliminado', {
+          action: {
+            label: 'Deshacer',
+            onClick: async () => {
+              // Re-create the lead
+              if (deletedLead) {
+                try {
+                  const res = await fetch('/api/leads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(deletedLead),
+                  })
+                  if (res.ok) {
+                    const data = await res.json()
+                    setRawLeads((prev) => [data.lead, ...prev])
+                    toast.success('Lead restaurado')
+                  }
+                } catch { toast.error('No se pudo restaurar') }
+              }
+            },
+          },
+          duration: 6000,
+        })
       } else {
+        // Rollback
+        if (deletedLead) setRawLeads((prev) => [deletedLead, ...prev])
         toast.error('Error al eliminar el lead')
       }
     } catch (err) {
       console.error('Error al eliminar lead:', err)
+      if (deletedLead) setRawLeads((prev) => [deletedLead, ...prev])
       toast.error('Error al eliminar el lead')
     }
   }
@@ -247,9 +283,9 @@ export default function CRMPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pb-[72px] md:pb-0 overflow-x-hidden">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pb-[72px] md:pb-0 overflow-x-hidden" role="main" aria-label="Panel de Leads">
         {/* ─── Sticky header ───────────────────────────── */}
-        <div className="crm-header sticky top-0 z-10 shrink-0">
+        <header className="crm-header sticky top-0 z-10 shrink-0">
           <div className="px-3 sm:px-6 py-2.5 sm:py-4">
             {/* Row 1: Title + Actions */}
             <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-3">
@@ -282,9 +318,11 @@ export default function CRMPage() {
                 </button>
 
                 {/* View mode toggle */}
-                <div className="flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden">
+                <div className="flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden" role="group" aria-label="Cambiar vista">
                   <button
                     onClick={() => setViewMode('kanban')}
+                    aria-label="Vista Kanban"
+                    aria-pressed={viewMode === 'kanban'}
                     className={cn(
                       'flex items-center justify-center h-8 w-8 transition-colors',
                       viewMode === 'kanban'
@@ -297,6 +335,8 @@ export default function CRMPage() {
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
+                    aria-label="Vista Lista"
+                    aria-pressed={viewMode === 'list'}
                     className={cn(
                       'flex items-center justify-center h-8 w-8 border-l border-[var(--crm-border)] transition-colors',
                       viewMode === 'list'
@@ -314,6 +354,7 @@ export default function CRMPage() {
                   variant="ghost"
                   size="sm"
                   disabled={loading}
+                  aria-label="Actualizar leads"
                   className={cn(
                     'h-8 w-8 p-0 rounded-md text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
                     'crm-focus-ring transition-all',
@@ -338,7 +379,7 @@ export default function CRMPage() {
             {/* Row 2: KPI cards */}
             {loading ? <KpiCardsSkeleton /> : <KpiCards leads={leads} />}
           </div>
-        </div>
+        </header>
 
         {/* ─── Main content ─────────────────────────────── */}
         <div className="flex-1 flex flex-col px-3 sm:px-6 py-3 sm:py-4">
