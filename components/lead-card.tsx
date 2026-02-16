@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Lead } from '@/lib/types/lead'
+import { Lead, getNextTask, isTaskOverdue, getOverdueTaskCount } from '@/lib/types/lead'
 import { Button } from '@/components/ui/button'
 import {
   MoreHorizontal,
@@ -15,6 +15,8 @@ import {
   DollarSign,
   Building2,
   Trash2,
+  AlertCircle,
+  CalendarCheck,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -33,6 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useState, useRef, useEffect } from 'react'
 import { LeadDrawer } from './lead-drawer'
@@ -210,6 +217,9 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
 
   const priority = getPriorityStyle(lead.priority)
   const ageDays = getLeadAgeDays(lead.createdAt)
+  const nextTask = getNextTask(lead)
+  const overdueCount = getOverdueTaskCount(lead)
+  const nextTaskIsOverdue = nextTask ? isTaskOverdue(nextTask) : false
 
   return (
     <>
@@ -219,10 +229,11 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
             'group relative rounded-[var(--crm-radius-md)] border bg-[var(--crm-bg-card)]',
             'cursor-pointer select-none touch-manipulation',
             'transition-all duration-[var(--crm-transition)]',
-            'hover:border-[var(--crm-border-hover)] hover:shadow-[var(--crm-shadow-sm)]',
-            'active:scale-[0.99]',
+            'hover:border-[var(--crm-border-hover)] hover:shadow-[var(--crm-shadow-md)] hover:-translate-y-[1px]',
+            'active:scale-[0.99] active:translate-y-0',
             isCompact ? 'px-2.5 py-2 border-[var(--crm-border-light)]' : 'px-3 py-2.5 border-[var(--crm-border)]',
-            (isDragging || isSortableDragging) && 'shadow-[var(--crm-shadow-drag)] scale-[1.02] opacity-80 border-[var(--crm-border-hover)] rotate-1'
+            (isDragging || isSortableDragging) && 'shadow-[var(--crm-shadow-drag)] scale-[1.02] opacity-80 border-[var(--crm-border-hover)] rotate-1',
+            overdueCount > 0 && !isDragging && 'border-l-2 border-l-[var(--crm-danger)]'
           )}
           onClick={(e) => {
             const target = e.target as HTMLElement
@@ -233,7 +244,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
           onTouchMove={isMobile ? handleTouchMove : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-          {/* Row 1: Priority dot + Name + Age + Menu */}
+          {/* Row 1: Priority dot + Name + Age + Actions */}
           <div className="flex items-center gap-2 mb-1">
             {!isMobile && (
               <div
@@ -259,6 +270,19 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
               {lead.nombre}
             </span>
 
+            {/* Overdue indicator */}
+            {overdueCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 crm-badge !px-1.5 !py-0 !text-[9px] !font-bold bg-[var(--crm-danger-light)] text-[var(--crm-danger)] shrink-0">
+                    <AlertCircle className="h-2.5 w-2.5" />
+                    {overdueCount}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top">{overdueCount} tarea{overdueCount > 1 ? 's' : ''} vencida{overdueCount > 1 ? 's' : ''}</TooltipContent>
+              </Tooltip>
+            )}
+
             <span className={cn(
               'crm-badge !px-1.5 !py-0 !text-[10px] !font-semibold crm-mono shrink-0',
               getLeadAgeStyle(ageDays)
@@ -266,6 +290,44 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
               {getLeadAgeLabel(ageDays)}
             </span>
 
+            {/* Icon quick actions (hover) */}
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleWhatsAppClick}
+                    className="h-5 w-5 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-success)] hover:bg-[var(--crm-success-light)] transition-colors"
+                  >
+                    <MessageCircle className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">WhatsApp</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${lead.email}` }}
+                    className="h-5 w-5 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] hover:text-[var(--crm-text-secondary)] transition-colors"
+                  >
+                    <Mail className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Email</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }}
+                    className="h-5 w-5 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] hover:text-[var(--crm-text-secondary)] transition-colors"
+                  >
+                    <Phone className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Llamar</TooltipContent>
+              </Tooltip>
+            </div>
+
+            {/* "..." menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button
@@ -284,19 +346,6 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDialogOpen(true) }}>
                   <Eye className="h-3.5 w-3.5 mr-2" />
                   Ver detalles
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${lead.email}` }}>
-                  <Mail className="h-3.5 w-3.5 mr-2" />
-                  Enviar email
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }}>
-                  <Phone className="h-3.5 w-3.5 mr-2" />
-                  Llamar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleWhatsAppClick}>
-                  <MessageCircle className="h-3.5 w-3.5 mr-2" />
-                  WhatsApp
                 </DropdownMenuItem>
                 {onDeleteLead && (
                   <>
@@ -354,7 +403,25 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
             )}
           </div>
 
-          {/* Row 4: Owner + last contact */}
+          {/* Row 4: Next task chip */}
+          {nextTask && (
+            <div className={cn('pl-4', isCompact ? 'mt-1.5' : 'mt-2')}>
+              <span className={cn(
+                'inline-flex items-center gap-1 crm-badge !text-[10px]',
+                nextTaskIsOverdue
+                  ? 'bg-[var(--crm-danger-light)] text-[var(--crm-danger)]'
+                  : 'bg-[var(--crm-warning-light)] text-[var(--crm-warning)]'
+              )}>
+                <CalendarCheck className="h-2.5 w-2.5" />
+                <span className="truncate max-w-[120px]">{nextTask.description}</span>
+                <span className="crm-mono">
+                  {new Date(nextTask.dueDate).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                </span>
+              </span>
+            </div>
+          )}
+
+          {/* Row 5: Owner + last contact */}
           <div className={cn(
             'flex items-center justify-between border-t border-[var(--crm-border-light)] pl-4',
             isCompact ? 'mt-1.5 pt-1.5' : 'mt-2 pt-2'

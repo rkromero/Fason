@@ -22,18 +22,20 @@ export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd,
     <div
       ref={setNodeRef}
       className={cn(
-        'w-full h-full flex flex-col rounded-[var(--crm-radius-lg)] border bg-[var(--crm-bg-card)]',
+        'w-full h-full flex flex-col rounded-[var(--crm-radius-lg)] border bg-[var(--crm-bg-card)] overflow-hidden',
         'transition-all duration-[var(--crm-transition)]',
         isActive
           ? 'border-[var(--crm-primary)] ring-2 ring-[var(--crm-primary)]/10 bg-[var(--crm-bg-subtle)]'
           : 'border-[var(--crm-border)]'
       )}
     >
+      {/* Color bar indicator (2-3px) */}
+      <div className={cn('h-[3px] w-full shrink-0', stage.bar)} />
+
       {/* Sticky header */}
-      <div className="sticky top-0 z-[1] border-b border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] px-3 py-2.5 shrink-0 rounded-t-[var(--crm-radius-lg)]">
+      <div className="sticky top-0 z-[1] border-b border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] px-3 py-2.5 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className={cn('crm-dot', stage.dot)} />
             <h3 className="text-[13px] font-semibold text-[var(--crm-text)] truncate">
               {stage.label}
             </h3>
@@ -51,8 +53,7 @@ export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd,
                 className={cn(
                   'flex h-5 w-5 items-center justify-center rounded-[var(--crm-radius-sm)]',
                   'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
-                  'transition-all duration-[var(--crm-transition-fast)] crm-focus-ring',
-                  'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+                  'transition-all duration-[var(--crm-transition-fast)] crm-focus-ring'
                 )}
                 title="Agregar lead"
               >
@@ -64,7 +65,7 @@ export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd,
       </div>
 
       {/* Content with independent scroll */}
-      <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 group">
+      <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 group relative">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)] mb-3">
@@ -91,7 +92,6 @@ export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd,
         ) : (
           <div className="flex flex-col gap-1.5 p-2">
             {children}
-            {/* Quick add button at bottom */}
             {onQuickAdd && (
               <button
                 onClick={() => onQuickAdd(stage.id)}
@@ -112,7 +112,7 @@ export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd,
 
         {/* Drop indicator overlay */}
         {isActive && !isEmpty && (
-          <div className="absolute inset-0 rounded-[var(--crm-radius-lg)] border-2 border-dashed border-[var(--crm-primary)]/30 bg-[var(--crm-primary)]/[0.02] pointer-events-none z-[2]" />
+          <div className="absolute inset-0 border-2 border-dashed border-[var(--crm-primary)]/30 bg-[var(--crm-primary)]/[0.02] pointer-events-none z-[2]" />
         )}
       </div>
     </div>
