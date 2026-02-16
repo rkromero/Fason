@@ -288,8 +288,8 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
             </div>
 
             {/* "..." menu */}
-            <DropdownMenu modal={true}>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button
                   variant="ghost"
                   size="icon"
