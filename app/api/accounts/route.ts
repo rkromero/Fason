@@ -20,13 +20,13 @@ export async function POST(request: Request) {
   try {
     await ensureDatabaseInitialized()
     const body = await request.json()
-    const { nombre, empresa, email, telefono, website, industria, notas, ownerId } = body
+    const { nombre, empresa, cuit, email, telefono, website, industria, notas, ownerId } = body
 
     if (!nombre || !empresa) {
       return NextResponse.json({ error: 'Nombre y empresa son requeridos' }, { status: 400 })
     }
 
-    const account = await createAccount({ nombre, empresa, email, telefono, website, industria, notas, ownerId })
+    const account = await createAccount({ nombre, empresa, cuit, email, telefono, website, industria, notas, ownerId })
     return NextResponse.json({ account }, { status: 201 })
   } catch (error) {
     console.error('Error al crear cuenta:', error)

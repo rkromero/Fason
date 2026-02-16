@@ -128,6 +128,41 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id)`)
     console.log('Tabla contacts verificada')
 
+    // ─── Migración accounts: agregar cuit si no existe ────────
+    const checkCuitCol = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'accounts' AND column_name = 'cuit'
+      )
+    `)
+    if (!checkCuitCol.rows[0].exists) {
+      console.log('Agregando columna cuit a accounts...')
+      await pool.query(`ALTER TABLE accounts ADD COLUMN cuit VARCHAR(20)`)
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_cuit ON accounts(cuit)`)
+    }
+
+    // ─── Tabla deals ──────────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS deals (
+        id VARCHAR(255) PRIMARY KEY,
+        titulo VARCHAR(500) NOT NULL,
+        monto NUMERIC(15,2) NOT NULL DEFAULT 0,
+        moneda VARCHAR(10) NOT NULL DEFAULT 'ARS',
+        status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('won', 'lost', 'open')),
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        contact_id VARCHAR(255) REFERENCES contacts(id) ON DELETE SET NULL,
+        origin_lead_id VARCHAR(255) REFERENCES leads(id) ON DELETE SET NULL,
+        owner_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+        closed_at TIMESTAMP WITH TIME ZONE,
+        notas TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_account_id ON deals(account_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_status ON deals(status)`)
+    console.log('Tabla deals verificada')
+
     // ─── Migración leads: columnas de conversión ─────────────
     const checkStatusCol = await pool.query(`
       SELECT EXISTS (

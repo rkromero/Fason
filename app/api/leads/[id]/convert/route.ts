@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getLeadById } from '@/lib/db/queries'
-import { createAccount, createContact, convertLead } from '@/lib/db/account-queries'
+import { createAccount, createContact, convertLead, createDeal } from '@/lib/db/account-queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
 export async function POST(
@@ -29,6 +29,7 @@ export async function POST(
       const account = await createAccount({
         nombre: body.accountNombre || lead.nombre,
         empresa: body.accountEmpresa || lead.empresa,
+        cuit: body.accountCuit,
         email: body.accountEmail || lead.email,
         telefono: body.accountTelefono || lead.telefono,
         website: body.accountWebsite,
@@ -47,12 +48,27 @@ export async function POST(
       accountId,
     })
 
+    // Create Deal "Won"
+    const dealAmount = parseFloat(body.dealAmount) || 0
+    const deal = await createDeal({
+      titulo: body.dealTitulo || `${lead.empresa} - Conversión`,
+      monto: dealAmount,
+      moneda: body.dealMoneda || 'ARS',
+      status: 'won',
+      accountId,
+      contactId: contact.id,
+      originLeadId: id,
+      ownerId: lead.ownerId,
+      notas: body.dealNotas,
+    })
+
     await convertLead(id, accountId, contact.id)
 
     return NextResponse.json({
       success: true,
       accountId,
       contactId: contact.id,
+      dealId: deal.id,
     }, { status: 200 })
   } catch (error) {
     console.error('Error al convertir lead:', error)

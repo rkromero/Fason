@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Lead } from '@/lib/types/lead'
 import { User } from '@/lib/types/user'
 import { KanbanBoard } from '@/components/kanban-board'
@@ -100,6 +101,7 @@ function countActiveFilters(filters: KanbanFilters): number {
 
 // ─── Page ───────────────────────────────────────────────────────
 export default function CRMPage() {
+  const router = useRouter()
   const [rawLeads, setRawLeads] = useState<Lead[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -175,13 +177,12 @@ export default function CRMPage() {
     }
   }
 
-  const handleLeadConverted = () => {
-    // Remove converted lead from active list
+  const handleLeadConverted = (accountId: string) => {
     if (convertLead) {
       setRawLeads((prev) => prev.filter((l) => l.id !== convertLead.id))
     }
     setConvertLead(null)
-    fetchLeads()
+    router.push(`/admin/cuentas/${accountId}`)
   }
 
   const fetchConvertedLeads = async () => {
