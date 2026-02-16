@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Lead, LeadSource, LeadTask, TaskType, MOCK_OWNERS } from '@/lib/types/lead'
+import { Lead } from '@/lib/types/lead'
 import { KanbanBoard } from '@/components/kanban-board'
 import { LeadsListView } from '@/components/leads-list-view'
 import { KanbanTopBar, KanbanFilters, DEFAULT_FILTERS } from '@/components/kanban-top-bar'
@@ -13,54 +13,15 @@ import { NewLeadDialog } from '@/components/new-lead-dialog'
 import { CRMSidebar } from '@/components/crm-sidebar'
 import { cn } from '@/lib/utils'
 
-// ─── Mock enrichment ────────────────────────────────────────────
-const MOCK_SOURCES: LeadSource[] = ['web', 'referido', 'redes', 'llamada', 'email', 'otro']
-const MOCK_PRIORITIES: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C']
-const MOCK_TAGS_POOL = ['urgente', 'VIP', 'recontactar', 'interesado', 'precio', 'muestra']
-
-function seedRandom(str: string): number {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return Math.abs(hash)
-}
-
-const MOCK_TASK_TYPES: TaskType[] = ['llamada', 'email', 'whatsapp', 'reunion', 'seguimiento']
-const MOCK_TASK_DESCS = ['Llamar al cliente', 'Enviar propuesta', 'Reunión de seguimiento', 'Enviar muestras', 'Confirmar pedido']
-
+// ─── Lead enrichment (derive computed fields only) ──────────────
 function enrichLead(lead: Lead): Lead {
-  const seed = seedRandom(lead.id)
-  const hasTasks = lead.tasks && lead.tasks.length > 0
-
-  const mockTasks: LeadTask[] = []
-  if (!hasTasks && seed % 3 !== 0) {
-    const taskCount = 1 + (seed % 3)
-    for (let i = 0; i < taskCount; i++) {
-      const daysOffset = ((seed + i * 7) % 14) - 5
-      const taskDate = new Date(Date.now() + daysOffset * 86400000)
-      mockTasks.push({
-        id: `mock-task-${lead.id}-${i}`,
-        type: MOCK_TASK_TYPES[(seed + i) % MOCK_TASK_TYPES.length],
-        description: MOCK_TASK_DESCS[(seed + i) % MOCK_TASK_DESCS.length],
-        dueDate: taskDate.toISOString(),
-        status: daysOffset < -2 ? 'overdue' : 'pending',
-        createdAt: lead.createdAt,
-      })
-    }
-  }
-
-  const tasks = hasTasks ? lead.tasks! : mockTasks
-  const nextPending = tasks.filter((t) => t.status !== 'done').sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]
+  const tasks = lead.tasks || []
+  const nextPending = tasks
+    .filter((t) => t.status !== 'done')
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]
 
   return {
     ...lead,
-    source: lead.source ?? MOCK_SOURCES[seed % MOCK_SOURCES.length],
-    owner: lead.owner ?? MOCK_OWNERS[seed % MOCK_OWNERS.length],
-    priority: lead.priority ?? MOCK_PRIORITIES[seed % MOCK_PRIORITIES.length],
-    tags: lead.tags ?? [MOCK_TAGS_POOL[seed % MOCK_TAGS_POOL.length], MOCK_TAGS_POOL[(seed + 2) % MOCK_TAGS_POOL.length]],
-    firstContactDate: lead.firstContactDate ?? (lead.lastContact || new Date(new Date(lead.createdAt).getTime() + (seed % 72) * 3600000).toISOString()),
-    tasks,
     nextTaskDate: lead.nextTaskDate ?? nextPending?.dueDate,
     nextTaskDescription: lead.nextTaskDescription ?? nextPending?.description,
   }

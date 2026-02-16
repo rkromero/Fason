@@ -32,23 +32,15 @@ type DrawerTab = 'resumen' | 'tareas' | 'timeline' | 'ficha'
 
 // ─── Helpers ────────────────────────────────────────────────────
 function buildTimeline(lead: Lead): Activity[] {
-  if (lead.activities && lead.activities.length > 0) {
-    return [...lead.activities].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }
   const entries: Activity[] = []
   entries.push({ id: 'created', type: 'created', date: lead.createdAt, content: 'Lead creado' })
+  if (lead.activities && lead.activities.length > 0) {
+    entries.push(...lead.activities)
+  }
   if (lead.notes && lead.notes.length > 0) {
     lead.notes.forEach((note, i) => {
-      const offsetDays = (i + 1) * 2
-      const noteDate = new Date(new Date(lead.createdAt).getTime() + offsetDays * 86400000)
-      entries.push({ id: `note-${i}`, type: 'note', date: noteDate.toISOString(), content: note })
+      entries.push({ id: `note-${i}`, type: 'note', date: lead.updatedAt, content: note })
     })
-  }
-  if (lead.lastContact) {
-    entries.push({ id: 'last-call', type: 'call', date: lead.lastContact, content: 'Llamada de seguimiento' })
-  }
-  if (lead.firstContactDate && lead.firstContactDate !== lead.createdAt) {
-    entries.push({ id: 'first-contact', type: 'email', date: lead.firstContactDate, content: 'Primer contacto por email' })
   }
   entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   return entries
