@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
 import type { StageConfig } from '@/lib/types/lead'
@@ -13,7 +14,7 @@ interface KanbanColumnProps {
   children: React.ReactNode
 }
 
-export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd, children }: KanbanColumnProps) {
+export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd, children }: KanbanColumnProps) {
   const { setNodeRef, isOver: isDropOver } = useDroppable({ id: stage.id })
   const isActive = isOverProp || isDropOver
   const isEmpty = leadCount === 0
@@ -117,4 +118,4 @@ export function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd,
       </div>
     </div>
   )
-}
+})

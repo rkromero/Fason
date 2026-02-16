@@ -1,5 +1,6 @@
-import pool from '../db'
+import pool, { generateId, withTransaction } from '../db'
 import { Account, Contact, Deal, DuplicateMatch } from '@/lib/types/account'
+import type { PoolClient } from 'pg'
 
 // ─── Account queries ─────────────────────────────────────────────
 
@@ -59,13 +60,15 @@ export async function searchAccounts(query: string): Promise<Account[]> {
   return result.rows.map(mapAccount)
 }
 
+// createAccount con UUID — retorna directamente sin SELECT extra
 export async function createAccount(data: {
   nombre: string; empresa: string; cuit?: string; email?: string; telefono?: string;
   website?: string; industria?: string; notas?: string; ownerId?: string
-}): Promise<Account> {
-  const id = `acc-${Date.now()}`
+}, client?: PoolClient): Promise<Account> {
+  const id = generateId('acc')
   const now = new Date().toISOString()
-  await pool.query(
+  const q = client || pool
+  await q.query(
     `INSERT INTO accounts (id, nombre, empresa, cuit, email, telefono, website, industria, notas, owner_id, created_at, updated_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)`,
     [id, data.nombre, data.empresa, data.cuit || null, data.email || null, data.telefono || null,
@@ -164,12 +167,14 @@ export async function getContactsByAccountId(accountId: string): Promise<Contact
   return result.rows.map(mapContact)
 }
 
+// createContact con UUID — retorna directamente sin SELECT extra
 export async function createContact(data: {
   nombre: string; email?: string; telefono?: string; cargo?: string; accountId: string
-}): Promise<{ id: string }> {
-  const id = `con-${Date.now()}`
+}, client?: PoolClient): Promise<{ id: string }> {
+  const id = generateId('con')
   const now = new Date().toISOString()
-  await pool.query(
+  const q = client || pool
+  await q.query(
     `INSERT INTO contacts (id, nombre, email, telefono, cargo, account_id, created_at, updated_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $7)`,
     [id, data.nombre, data.email || null, data.telefono || null, data.cargo || null, data.accountId, now]
@@ -221,36 +226,85 @@ export async function getDealsByAccountId(accountId: string): Promise<Deal[]> {
   return result.rows.map(mapDeal)
 }
 
+// createDeal con UUID — retorna directamente sin SELECT extra
 export async function createDeal(data: {
   titulo: string; monto: number; moneda?: string; status: string;
   accountId: string; contactId?: string; originLeadId?: string; ownerId?: string; notas?: string
-}): Promise<Deal> {
-  const id = `deal-${Date.now()}`
+}, client?: PoolClient): Promise<Deal> {
+  const id = generateId('deal')
   const now = new Date().toISOString()
   const closedAt = data.status === 'won' || data.status === 'lost' ? now : null
-  await pool.query(
+  const q = client || pool
+  await q.query(
     `INSERT INTO deals (id, titulo, monto, moneda, status, account_id, contact_id, origin_lead_id, owner_id, closed_at, notas, created_at, updated_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)`,
     [id, data.titulo, data.monto, data.moneda || 'ARS', data.status, data.accountId,
      data.contactId || null, data.originLeadId || null, data.ownerId || null,
      closedAt, data.notas || null, now]
   )
-  const result = await pool.query(
-    `SELECT ${DEAL_SELECT}
-     FROM deals d LEFT JOIN accounts a ON d.account_id = a.id LEFT JOIN users u ON d.owner_id = u.id
-     WHERE d.id = $1`, [id]
-  )
-  return mapDeal(result.rows[0])
+  return {
+    id, titulo: data.titulo, monto: data.monto, moneda: data.moneda || 'ARS',
+    status: data.status as Deal['status'], accountId: data.accountId,
+    contactId: data.contactId, originLeadId: data.originLeadId,
+    ownerId: data.ownerId, closedAt: closedAt || undefined,
+    notas: data.notas, createdAt: now, updatedAt: now,
+  }
 }
 
-// ─── Convert lead ────────────────────────────────────────────────
+// ─── Convert lead (transactional) ────────────────────────────────
 
-export async function convertLead(leadId: string, accountId: string, contactId: string): Promise<void> {
+export async function convertLead(leadId: string, accountId: string, contactId: string, client?: PoolClient): Promise<void> {
   const now = new Date().toISOString()
-  await pool.query(
+  const q = client || pool
+  await q.query(
     `UPDATE leads SET status = 'converted', converted_at = $1, account_id = $2, contact_id = $3, stage = 'ganado', updated_at = $1 WHERE id = $4`,
     [now, accountId, contactId, leadId]
   )
+}
+
+// ─── Full transactional conversion ──────────────────────────────
+
+export async function convertLeadTransaction(data: {
+  leadId: string
+  existingAccountId?: string
+  accountData?: { nombre: string; empresa: string; cuit?: string; email?: string; telefono?: string; website?: string; industria?: string; notas?: string; ownerId?: string }
+  contactData: { nombre: string; email?: string; telefono?: string; cargo?: string }
+  dealData: { titulo: string; monto: number; moneda?: string; notas?: string }
+  leadOwnerId?: string
+}): Promise<{ accountId: string; contactId: string; dealId: string }> {
+  return withTransaction(async (client) => {
+    let accountId: string
+
+    if (data.existingAccountId) {
+      accountId = data.existingAccountId
+    } else if (data.accountData) {
+      const account = await createAccount(data.accountData, client)
+      accountId = account.id
+    } else {
+      throw new Error('Se requiere existingAccountId o accountData')
+    }
+
+    const contact = await createContact({
+      ...data.contactData,
+      accountId,
+    }, client)
+
+    const deal = await createDeal({
+      titulo: data.dealData.titulo,
+      monto: data.dealData.monto,
+      moneda: data.dealData.moneda || 'ARS',
+      status: 'won',
+      accountId,
+      contactId: contact.id,
+      originLeadId: data.leadId,
+      ownerId: data.leadOwnerId,
+      notas: data.dealData.notas,
+    }, client)
+
+    await convertLead(data.leadId, accountId, contact.id, client)
+
+    return { accountId, contactId: contact.id, dealId: deal.id }
+  })
 }
 
 // ─── Converted leads by account ──────────────────────────────────

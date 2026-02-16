@@ -41,7 +41,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo, useMemo } from 'react'
 import { LeadDrawer } from './lead-drawer'
 import type { DensityMode } from '@/lib/types/lead'
 
@@ -112,7 +112,7 @@ function getVolumenLabel(volumen: string) {
   }
 }
 
-export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density = 'comfortable' }: LeadCardProps) {
+export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density = 'comfortable' }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -215,10 +215,10 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
     if (!isSortableDragging && !isDragging) setIsDialogOpen(true)
   }
 
-  const priority = getPriorityStyle(lead.priority)
-  const ageDays = getLeadAgeDays(lead.createdAt)
-  const nextTask = getNextTask(lead)
-  const overdueCount = getOverdueTaskCount(lead)
+  const priority = useMemo(() => getPriorityStyle(lead.priority), [lead.priority])
+  const ageDays = useMemo(() => getLeadAgeDays(lead.createdAt), [lead.createdAt])
+  const nextTask = useMemo(() => getNextTask(lead), [lead])
+  const overdueCount = useMemo(() => getOverdueTaskCount(lead), [lead])
   const nextTaskIsOverdue = nextTask ? isTaskOverdue(nextTask) : false
 
   return (
@@ -476,4 +476,4 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
       </AlertDialog>
     </>
   )
-}
+})

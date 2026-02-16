@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useMemo } from 'react'
 import { Users, TrendingUp, Clock, Percent, AlertCircle } from 'lucide-react'
 import { Lead, getOverdueTaskCount } from '@/lib/types/lead'
 import { cn } from '@/lib/utils'
@@ -89,13 +90,22 @@ const KPI_CONFIG: KpiConfig[] = [
   },
 ]
 
-export function KpiCards({ leads }: KpiCardsProps) {
+export const KpiCards = memo(function KpiCards({ leads }: KpiCardsProps) {
+  // Pre-compute values once to avoid recalculating in each KPI card render
+  const kpiValues = useMemo(() => {
+    return KPI_CONFIG.map((kpi) => ({
+      key: kpi.key,
+      value: kpi.getValue(leads),
+      isAlert: kpi.alert?.(leads) ?? false,
+    }))
+  }, [leads])
+
   return (
     <>
       {/* Mobile: 5 KPIs in one row, ultra compact */}
       <div className="flex sm:hidden gap-1.5">
-        {KPI_CONFIG.map((kpi) => {
-          const isAlert = kpi.alert?.(leads)
+        {KPI_CONFIG.map((kpi, i) => {
+          const { isAlert, value } = kpiValues[i]
           return (
             <div
               key={kpi.key}
@@ -105,7 +115,7 @@ export function KpiCards({ leads }: KpiCardsProps) {
               )}
             >
               <p className={cn('text-[14px] font-bold leading-tight crm-mono', isAlert ? 'text-[var(--crm-danger)]' : 'text-[var(--crm-text)]')}>
-                {kpi.getValue(leads)}
+                {value}
               </p>
               <p className="text-[8px] font-medium text-[var(--crm-text-muted)] uppercase tracking-wide leading-tight mt-0.5 truncate">
                 {kpi.shortLabel}
@@ -117,9 +127,9 @@ export function KpiCards({ leads }: KpiCardsProps) {
 
       {/* Desktop: full cards with icons */}
       <div className="hidden sm:grid sm:grid-cols-5 gap-2.5">
-        {KPI_CONFIG.map((kpi) => {
+        {KPI_CONFIG.map((kpi, i) => {
           const Icon = kpi.icon
-          const isAlert = kpi.alert?.(leads)
+          const { isAlert, value } = kpiValues[i]
           return (
             <div
               key={kpi.key}
@@ -133,7 +143,7 @@ export function KpiCards({ leads }: KpiCardsProps) {
               </div>
               <div className="min-w-0">
                 <p className="crm-label truncate">{kpi.label}</p>
-                <p className={cn('crm-value text-[18px]', isAlert && 'text-[var(--crm-danger)]')}>{kpi.getValue(leads)}</p>
+                <p className={cn('crm-value text-[18px]', isAlert && 'text-[var(--crm-danger)]')}>{value}</p>
               </div>
             </div>
           )
@@ -141,7 +151,7 @@ export function KpiCards({ leads }: KpiCardsProps) {
       </div>
     </>
   )
-}
+})
 
 export function KpiCardsSkeleton() {
   return (

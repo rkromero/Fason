@@ -1,4 +1,4 @@
-import pool from '../db'
+import pool, { generateId } from '../db'
 import bcrypt from 'bcryptjs'
 import { User } from '@/lib/types/user'
 
@@ -39,7 +39,7 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function createUser(data: { nombre: string; email: string; telefono?: string; rol: string; password: string }): Promise<User> {
-  const id = `usr-${Date.now()}`
+  const id = generateId('usr')
   const now = new Date().toISOString()
   const passwordHash = await bcrypt.hash(data.password, 12)
 

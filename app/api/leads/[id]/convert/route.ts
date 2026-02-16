@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getLeadById } from '@/lib/db/queries'
-import { createAccount, createContact, convertLead, createDeal } from '@/lib/db/account-queries'
+import { convertLeadTransaction } from '@/lib/db/account-queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
 export async function POST(
@@ -21,12 +21,11 @@ export async function POST(
       return NextResponse.json({ error: 'Este lead ya fue convertido' }, { status: 400 })
     }
 
-    let accountId: string
-
-    if (body.existingAccountId) {
-      accountId = body.existingAccountId
-    } else {
-      const account = await createAccount({
+    // Toda la conversión dentro de una transacción
+    const result = await convertLeadTransaction({
+      leadId: id,
+      existingAccountId: body.existingAccountId || undefined,
+      accountData: body.existingAccountId ? undefined : {
         nombre: body.accountNombre || lead.nombre,
         empresa: body.accountEmpresa || lead.empresa,
         cuit: body.accountCuit,
@@ -36,39 +35,27 @@ export async function POST(
         industria: body.accountIndustria,
         notas: body.accountNotas,
         ownerId: lead.ownerId,
-      })
-      accountId = account.id
-    }
-
-    const contact = await createContact({
-      nombre: body.contactNombre || lead.nombre,
-      email: body.contactEmail || lead.email,
-      telefono: body.contactTelefono || lead.telefono,
-      cargo: body.contactCargo,
-      accountId,
+      },
+      contactData: {
+        nombre: body.contactNombre || lead.nombre,
+        email: body.contactEmail || lead.email,
+        telefono: body.contactTelefono || lead.telefono,
+        cargo: body.contactCargo,
+      },
+      dealData: {
+        titulo: body.dealTitulo || `${lead.empresa} - Conversión`,
+        monto: parseFloat(body.dealAmount) || 0,
+        moneda: body.dealMoneda || 'ARS',
+        notas: body.dealNotas,
+      },
+      leadOwnerId: lead.ownerId,
     })
-
-    // Create Deal "Won"
-    const dealAmount = parseFloat(body.dealAmount) || 0
-    const deal = await createDeal({
-      titulo: body.dealTitulo || `${lead.empresa} - Conversión`,
-      monto: dealAmount,
-      moneda: body.dealMoneda || 'ARS',
-      status: 'won',
-      accountId,
-      contactId: contact.id,
-      originLeadId: id,
-      ownerId: lead.ownerId,
-      notas: body.dealNotas,
-    })
-
-    await convertLead(id, accountId, contact.id)
 
     return NextResponse.json({
       success: true,
-      accountId,
-      contactId: contact.id,
-      dealId: deal.id,
+      accountId: result.accountId,
+      contactId: result.contactId,
+      dealId: result.dealId,
     }, { status: 200 })
   } catch (error) {
     console.error('Error al convertir lead:', error)

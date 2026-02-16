@@ -7,24 +7,20 @@ import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 const ADMIN_EMAIL = 'rodolfor86@gmail.com'
 const ADMIN_DEFAULT_PW = 'Mon$$123'
 
-async function ensureAdminPassword() {
-  try {
-    // Asegurar que la columna password_hash exista
-    const checkCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_name = 'users' AND column_name = 'password_hash'
-      )
-    `)
-    if (!checkCol.rows[0].exists) {
-      await pool.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)`)
-    }
+let adminChecked = false
 
-    // Verificar si el admin tiene password
+async function ensureAdminPassword() {
+  if (adminChecked) return
+  try {
     const check = await pool.query(
       `SELECT id, password_hash FROM users WHERE email = $1`,
       [ADMIN_EMAIL]
     )
+
+    if (check.rows.length > 0 && check.rows[0].password_hash) {
+      adminChecked = true
+      return
+    }
 
     if (check.rows.length > 0 && !check.rows[0].password_hash) {
       const hash = await bcrypt.hash(ADMIN_DEFAULT_PW, 12)
@@ -32,7 +28,6 @@ async function ensureAdminPassword() {
         `UPDATE users SET password_hash = $1, rol = 'admin', updated_at = NOW() WHERE email = $2`,
         [hash, ADMIN_EMAIL]
       )
-      console.log('Password del admin establecido correctamente')
     } else if (check.rows.length === 0) {
       const hash = await bcrypt.hash(ADMIN_DEFAULT_PW, 12)
       await pool.query(
@@ -41,8 +36,8 @@ async function ensureAdminPassword() {
          ON CONFLICT (email) DO NOTHING`,
         ['usr-admin-1', 'Administrador', ADMIN_EMAIL, hash]
       )
-      console.log('Usuario admin creado correctamente')
     }
+    adminChecked = true
   } catch (err) {
     console.error('Error asegurando admin password:', err)
   }

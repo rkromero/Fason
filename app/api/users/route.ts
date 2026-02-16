@@ -6,7 +6,9 @@ export async function GET() {
   try {
     await ensureDatabaseInitialized()
     const users = await getAllUsers()
-    return NextResponse.json({ users }, { status: 200 })
+    const res = NextResponse.json({ users }, { status: 200 })
+    res.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+    return res
   } catch (error) {
     console.error('Error al obtener usuarios:', error)
     return NextResponse.json({ error: 'Error al obtener los usuarios' }, { status: 500 })

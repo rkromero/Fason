@@ -1,14 +1,54 @@
 import pool from '../db'
 import bcrypt from 'bcryptjs'
 
-/**
- * Inicializa la base de datos: crea tablas, aplica migraciones y crea admin por defecto
- */
+// ─── Migration versioning ───────────────────────────────────────
+
+async function ensureMigrationsTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL UNIQUE,
+      applied_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )
+  `)
+}
+
+async function hasMigration(name: string): Promise<boolean> {
+  const r = await pool.query(`SELECT 1 FROM _migrations WHERE name = $1`, [name])
+  return r.rows.length > 0
+}
+
+async function markMigration(name: string) {
+  await pool.query(`INSERT INTO _migrations (name) VALUES ($1) ON CONFLICT DO NOTHING`, [name])
+}
+
+async function runMigration(name: string, fn: () => Promise<void>) {
+  if (await hasMigration(name)) return
+  console.log(`Ejecutando migración: ${name}`)
+  await fn()
+  await markMigration(name)
+  console.log(`Migración completada: ${name}`)
+}
+
+// ─── Column check helper ────────────────────────────────────────
+
+async function columnExists(table: string, column: string): Promise<boolean> {
+  const r = await pool.query(
+    `SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = $1 AND column_name = $2)`,
+    [table, column]
+  )
+  return r.rows[0].exists
+}
+
+// ─── Main init ──────────────────────────────────────────────────
+
 export async function initDatabase() {
   try {
     console.log('Verificando conexión a la base de datos...')
     await pool.query('SELECT 1')
     console.log('Conexión establecida')
+
+    await ensureMigrationsTable()
 
     // ─── Tabla users ─────────────────────────────────────────
     await pool.query(`
@@ -27,27 +67,17 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_activo ON users(activo)`)
 
-    // Migración: agregar password_hash si no existe
-    const checkPwCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_name = 'users' AND column_name = 'password_hash'
-      )
-    `)
-    if (!checkPwCol.rows[0].exists) {
-      console.log('Agregando columna password_hash a users...')
-      await pool.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)`)
-    }
-
+    await runMigration('users_add_password_hash', async () => {
+      if (!(await columnExists('users', 'password_hash'))) {
+        await pool.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)`)
+      }
+    })
     console.log('Tabla users verificada')
 
     // ─── Tabla leads ─────────────────────────────────────────
-    const checkLeads = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'leads'
-      )
-    `)
+    const checkLeads = await pool.query(
+      `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'leads')`
+    )
 
     if (!checkLeads.rows[0].exists) {
       console.log('Creando tabla leads...')
@@ -64,8 +94,13 @@ export async function initDatabase() {
           envasado VARCHAR(50) NOT NULL CHECK (envasado IN ('flowpack-personalizado', 'flowpack-cristal', 'a-granel')),
           mensaje TEXT,
           inversion_estimada VARCHAR(100),
+          monto_estimado NUMERIC(15,2),
           stage VARCHAR(50) NOT NULL DEFAULT 'entrante' CHECK (stage IN ('entrante', 'primer-llamado', 'seguimiento', 'negociacion', 'ganado', 'perdido')),
           owner_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+          status VARCHAR(20) DEFAULT 'active',
+          converted_at TIMESTAMP WITH TIME ZONE,
+          account_id VARCHAR(255),
+          contact_id VARCHAR(255),
           created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
           notes JSONB DEFAULT '[]'::jsonb,
@@ -73,19 +108,45 @@ export async function initDatabase() {
         )
       `)
     } else {
-      // Migración: agregar owner_id si no existe
-      const checkOwnerCol = await pool.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_name = 'leads' AND column_name = 'owner_id'
-        )
-      `)
-      if (!checkOwnerCol.rows[0].exists) {
-        console.log('Agregando columna owner_id a leads...')
-        await pool.query(`ALTER TABLE leads ADD COLUMN owner_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL`)
-      }
+      await runMigration('leads_add_owner_id', async () => {
+        if (!(await columnExists('leads', 'owner_id'))) {
+          await pool.query(`ALTER TABLE leads ADD COLUMN owner_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL`)
+        }
+      })
+      await runMigration('leads_add_status', async () => {
+        if (!(await columnExists('leads', 'status'))) {
+          await pool.query(`ALTER TABLE leads ADD COLUMN status VARCHAR(20) DEFAULT 'active'`)
+        }
+      })
+      await runMigration('leads_add_converted_at', async () => {
+        if (!(await columnExists('leads', 'converted_at'))) {
+          await pool.query(`ALTER TABLE leads ADD COLUMN converted_at TIMESTAMP WITH TIME ZONE`)
+        }
+      })
+      await runMigration('leads_add_account_id', async () => {
+        if (!(await columnExists('leads', 'account_id'))) {
+          await pool.query(`ALTER TABLE leads ADD COLUMN account_id VARCHAR(255)`)
+        }
+      })
+      await runMigration('leads_add_contact_id', async () => {
+        if (!(await columnExists('leads', 'contact_id'))) {
+          await pool.query(`ALTER TABLE leads ADD COLUMN contact_id VARCHAR(255)`)
+        }
+      })
+      await runMigration('leads_add_monto_estimado', async () => {
+        if (!(await columnExists('leads', 'monto_estimado'))) {
+          await pool.query(`ALTER TABLE leads ADD COLUMN monto_estimado NUMERIC(15,2)`)
+          await pool.query(`
+            UPDATE leads SET monto_estimado = CAST(
+              NULLIF(REGEXP_REPLACE(inversion_estimada, '[^0-9.]', '', 'g'), '')
+            AS NUMERIC)
+            WHERE inversion_estimada IS NOT NULL AND monto_estimado IS NULL
+          `)
+        }
+      })
     }
 
+    // Lead indexes
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email)`)
@@ -96,6 +157,7 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_status_converted ON leads(status, converted_at DESC)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_producto ON leads(producto)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_account_id ON leads(account_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_monto ON leads(monto_estimado DESC NULLS LAST)`)
     console.log('Tabla leads verificada')
 
     // ─── Tabla accounts ─────────────────────────────────────
@@ -118,6 +180,13 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_owner_id ON accounts(owner_id)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON accounts(created_at DESC)`)
+
+    await runMigration('accounts_add_cuit', async () => {
+      if (!(await columnExists('accounts', 'cuit'))) {
+        await pool.query(`ALTER TABLE accounts ADD COLUMN cuit VARCHAR(20)`)
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_cuit ON accounts(cuit)`)
+      }
+    })
     console.log('Tabla accounts verificada')
 
     // ─── Tabla contacts ──────────────────────────────────────
@@ -134,20 +203,9 @@ export async function initDatabase() {
       )
     `)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_contacts_telefono ON contacts(telefono)`)
     console.log('Tabla contacts verificada')
-
-    // ─── Migración accounts: agregar cuit si no existe ────────
-    const checkCuitCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns
-        WHERE table_name = 'accounts' AND column_name = 'cuit'
-      )
-    `)
-    if (!checkCuitCol.rows[0].exists) {
-      console.log('Agregando columna cuit a accounts...')
-      await pool.query(`ALTER TABLE accounts ADD COLUMN cuit VARCHAR(20)`)
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_cuit ON accounts(cuit)`)
-    }
 
     // ─── Tabla deals ──────────────────────────────────────────
     await pool.query(`
@@ -173,48 +231,6 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_created_at ON deals(created_at DESC)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_origin_lead ON deals(origin_lead_id)`)
     console.log('Tabla deals verificada')
-
-    // ─── Migración leads: columnas de conversión ─────────────
-    const checkStatusCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns
-        WHERE table_name = 'leads' AND column_name = 'status'
-      )
-    `)
-    if (!checkStatusCol.rows[0].exists) {
-      console.log('Agregando columna status a leads...')
-      await pool.query(`ALTER TABLE leads ADD COLUMN status VARCHAR(20) DEFAULT 'active'`)
-    }
-    const checkConvertedAtCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns
-        WHERE table_name = 'leads' AND column_name = 'converted_at'
-      )
-    `)
-    if (!checkConvertedAtCol.rows[0].exists) {
-      console.log('Agregando columna converted_at a leads...')
-      await pool.query(`ALTER TABLE leads ADD COLUMN converted_at TIMESTAMP WITH TIME ZONE`)
-    }
-    const checkAccountIdCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns
-        WHERE table_name = 'leads' AND column_name = 'account_id'
-      )
-    `)
-    if (!checkAccountIdCol.rows[0].exists) {
-      console.log('Agregando columna account_id a leads...')
-      await pool.query(`ALTER TABLE leads ADD COLUMN account_id VARCHAR(255) REFERENCES accounts(id) ON DELETE SET NULL`)
-    }
-    const checkContactIdCol = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns
-        WHERE table_name = 'leads' AND column_name = 'contact_id'
-      )
-    `)
-    if (!checkContactIdCol.rows[0].exists) {
-      console.log('Agregando columna contact_id a leads...')
-      await pool.query(`ALTER TABLE leads ADD COLUMN contact_id VARCHAR(255) REFERENCES contacts(id) ON DELETE SET NULL`)
-    }
 
     // ─── Admin por defecto ───────────────────────────────────
     const adminEmail = 'rodolfor86@gmail.com'

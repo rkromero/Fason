@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, memo, useMemo } from 'react'
 import { Lead, STAGES, getNextTask, isTaskOverdue, getOverdueTaskCount } from '@/lib/types/lead'
 import { cn } from '@/lib/utils'
 import { LeadDrawer } from './lead-drawer'
@@ -39,7 +39,7 @@ function parseMonto(s?: string): number {
   return Number(s.replace(/[^0-9.]/g, '')) || 0
 }
 
-export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListViewProps) {
+export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListViewProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
@@ -53,7 +53,7 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
     }
   }
 
-  const sorted = [...leads].sort((a, b) => {
+  const sorted = useMemo(() => [...leads].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1
     switch (sortKey) {
       case 'nombre': return dir * a.nombre.localeCompare(b.nombre)
@@ -73,7 +73,7 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
       case 'updatedAt': return dir * (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())
       default: return 0
     }
-  })
+  }), [leads, sortKey, sortDir])
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 text-[var(--crm-text-placeholder)]" />
@@ -331,4 +331,4 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
       )}
     </>
   )
-}
+})

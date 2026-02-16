@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -126,8 +126,18 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
     }
   }, [currentStageIndex, goToStage])
 
+  // Pre-compute leads grouped by stage (avoids .filter() per column per render)
+  const leadsByStage = useMemo(() => {
+    const map: Record<string, Lead[]> = {}
+    for (const s of STAGES) map[s.id] = []
+    for (const l of leads) {
+      if (map[l.stage]) map[l.stage].push(l)
+    }
+    return map
+  }, [leads])
+
   const currentStage = STAGES[currentStageIndex]
-  const currentLeads = leads.filter((l) => l.stage === currentStage.id)
+  const currentLeads = leadsByStage[currentStage.id] || []
 
   return (
     <DndContext
@@ -141,7 +151,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
         <div className="md:hidden mb-2">
           <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide -mx-1 px-1">
             {STAGES.map((stage, index) => {
-              const count = leads.filter((l) => l.stage === stage.id).length
+              const count = (leadsByStage[stage.id] || []).length
               const isActive = currentStageIndex === index
               return (
                 <button
@@ -178,7 +188,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
             style={{ transform: `translateX(-${currentStageIndex * 100}%)` }}
           >
             {STAGES.map((stage) => {
-              const stageLeads = leads.filter((lead) => lead.stage === stage.id)
+              const stageLeads = leadsByStage[stage.id] || []
               return (
                 <div key={stage.id} className="w-full shrink-0">
                   {stageLeads.length === 0 ? (
@@ -213,7 +223,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
             style={{ height: 'calc(100vh - 260px)', minWidth: 'max-content' }}
           >
             {STAGES.map((stage) => {
-              const stageLeads = leads.filter((lead) => lead.stage === stage.id)
+              const stageLeads = leadsByStage[stage.id] || []
               return (
                 <div key={stage.id} style={{ width: 'var(--crm-col-width)', minWidth: 'var(--crm-col-width)' }} className="shrink-0 h-full">
                   <KanbanColumn

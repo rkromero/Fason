@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, memo, useMemo } from 'react'
 import { Lead, STAGES, getNextTask, isTaskOverdue, getOverdueTaskCount } from '@/lib/types/lead'
 import { cn } from '@/lib/utils'
 import { LeadDrawer } from './lead-drawer'
@@ -35,13 +35,13 @@ function getAgeBadge(createdAt: string) {
   return { label: `${w}sem`, cls: 'text-[var(--crm-danger)] bg-[var(--crm-danger-light)]' }
 }
 
-export function MobileLeadCard({ lead, onUpdateLead, onDeleteLead }: MobileLeadCardProps) {
+export const MobileLeadCard = memo(function MobileLeadCard({ lead, onUpdateLead, onDeleteLead }: MobileLeadCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const nextTask = getNextTask(lead)
-  const overdueCount = getOverdueTaskCount(lead)
+  const nextTask = useMemo(() => getNextTask(lead), [lead])
+  const overdueCount = useMemo(() => getOverdueTaskCount(lead), [lead])
   const taskOverdue = nextTask ? isTaskOverdue(nextTask) : false
-  const age = getAgeBadge(lead.createdAt)
+  const age = useMemo(() => getAgeBadge(lead.createdAt), [lead.createdAt])
 
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -143,4 +143,4 @@ export function MobileLeadCard({ lead, onUpdateLead, onDeleteLead }: MobileLeadC
       />
     </>
   )
-}
+})

@@ -10,13 +10,17 @@ export async function GET(request: Request) {
 
     if (q) {
       const accounts = await searchAccounts(q)
-      return NextResponse.json({ accounts }, { status: 200 })
+      const res = NextResponse.json({ accounts }, { status: 200 })
+      res.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=30')
+      return res
     }
 
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '100', 10)
     const result = await getAllAccounts(page, limit)
-    return NextResponse.json(result, { status: 200 })
+    const res = NextResponse.json(result, { status: 200 })
+    res.headers.set('Cache-Control', 'private, max-age=15, stale-while-revalidate=30')
+    return res
   } catch (error) {
     console.error('Error al obtener cuentas:', error)
     return NextResponse.json({ error: 'Error al obtener cuentas' }, { status: 500 })

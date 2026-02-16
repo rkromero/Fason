@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { Lead } from '@/lib/types/lead'
-import { getFilteredLeads, getConvertedLeads, createLead } from '@/lib/db/queries'
+import { getFilteredLeads, getConvertedLeads, getLeadCountsByStage, createLead } from '@/lib/db/queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
+
+function withCache(response: NextResponse, maxAge = 15): NextResponse {
+  response.headers.set('Cache-Control', `private, max-age=${maxAge}, stale-while-revalidate=30`)
+  return response
+}
 
 // GET - Obtener leads con filtros server-side
 export async function GET(request: Request) {
@@ -9,12 +14,18 @@ export async function GET(request: Request) {
     await ensureDatabaseInitialized()
     const { searchParams } = new URL(request.url)
 
-    // Converted leads (separate query)
+    // Stage counts (lightweight endpoint)
+    if (searchParams.get('counts') === 'true') {
+      const counts = await getLeadCountsByStage()
+      return withCache(NextResponse.json({ counts }, { status: 200 }), 10)
+    }
+
+    // Converted leads
     if (searchParams.get('converted') === 'true') {
       const page = parseInt(searchParams.get('page') || '1', 10)
       const limit = parseInt(searchParams.get('limit') || '50', 10)
       const result = await getConvertedLeads(page, limit)
-      return NextResponse.json(result, { status: 200 })
+      return withCache(NextResponse.json(result, { status: 200 }))
     }
 
     // Active leads with filters
@@ -30,13 +41,10 @@ export async function GET(request: Request) {
       limit: parseInt(searchParams.get('limit') || '200', 10),
     })
 
-    return NextResponse.json(result, { status: 200 })
+    return withCache(NextResponse.json(result, { status: 200 }))
   } catch (error) {
     console.error('Error al obtener leads:', error)
-    return NextResponse.json(
-      { error: 'Error al obtener los leads' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al obtener los leads' }, { status: 500 })
   }
 }
 
@@ -44,7 +52,6 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDatabaseInitialized()
-
     const body = await request.json()
     const { nombre, empresa, email, telefono, producto, marca, volumen, envasado, mensaje, inversionEstimada } = body
 
