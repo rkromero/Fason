@@ -185,27 +185,27 @@ export default function CRMPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pt-12 md:pt-0">
         {/* ─── Sticky header ───────────────────────────── */}
-        <div className="crm-header sticky top-0 z-10 shrink-0">
-          <div className="px-4 sm:px-6 py-3 sm:py-4">
+        <div className="crm-header sticky top-12 md:top-0 z-10 shrink-0">
+          <div className="px-3 sm:px-6 py-2.5 sm:py-4">
             {/* Row 1: Title + Actions */}
-            <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-3">
               <div className="min-w-0">
-                <h1 className="crm-title">Leads</h1>
-                <p className="crm-meta crm-mono mt-0.5">
+                <h1 className="crm-title text-[16px] sm:text-[18px]">Leads</h1>
+                <p className="crm-meta crm-mono mt-0.5 text-[10px] sm:text-[11px]">
                   {loading ? (
                     <span className="crm-skeleton inline-block w-16 h-3" />
                   ) : filteredLeads.length === leads.length ? (
                     `${leads.length} leads`
                   ) : (
-                    <>Mostrando {filteredLeads.length} de {leads.length} leads</>
+                    <>Mostrando {filteredLeads.length} de {leads.length}</>
                   )}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 {/* View mode toggle */}
-                <div className="hidden sm:flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden">
+                <div className="flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden">
                   <button
                     onClick={() => setViewMode('kanban')}
                     className={cn(
@@ -264,7 +264,7 @@ export default function CRMPage() {
         </div>
 
         {/* ─── Main content ─────────────────────────────── */}
-        <div className="flex-1 flex flex-col px-4 sm:px-6 py-4">
+        <div className="flex-1 flex flex-col px-3 sm:px-6 py-3 sm:py-4">
           {/* Error state */}
           {error && !loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -342,9 +342,27 @@ export default function CRMPage() {
             </>
           )}
 
-          {/* Loading skeleton for kanban */}
+          {/* Loading skeleton */}
           {loading && (
-            <div className="mt-4">
+            <div className="mt-3 sm:mt-4">
+              {/* Mobile skeleton */}
+              <div className="md:hidden space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="crm-skeleton h-2 w-2 rounded-full" />
+                      <div className="crm-skeleton h-3 w-32" />
+                      <div className="crm-skeleton h-4 w-8 rounded ml-auto" />
+                    </div>
+                    <div className="crm-skeleton h-2.5 w-24 ml-4" />
+                    <div className="flex gap-1.5 ml-4">
+                      <div className="crm-skeleton h-4 w-14 rounded" />
+                      <div className="crm-skeleton h-4 w-10 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop skeleton */}
               <div className="hidden md:grid md:grid-cols-6 gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="rounded-[var(--crm-radius-lg)] border border-[var(--crm-border)] bg-[var(--crm-bg-card)] p-3 space-y-3">

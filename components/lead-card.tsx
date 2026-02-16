@@ -290,8 +290,8 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
               {getLeadAgeLabel(ageDays)}
             </span>
 
-            {/* Icon quick actions (hover) */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            {/* Icon quick actions (always visible on mobile, hover on desktop) */}
+            <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -335,7 +335,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density
                   size="icon"
                   className={cn(
                     'h-6 w-6 shrink-0 rounded-[var(--crm-radius-sm)]',
-                    'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+                    'md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100',
                     'transition-opacity hover:bg-[var(--crm-bg-hover)]'
                   )}
                 >

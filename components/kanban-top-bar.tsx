@@ -84,10 +84,32 @@ export function KanbanTopBar({ filters, onFiltersChange, activeFilterCount, user
     filters.owner !== 'all'
 
   return (
-    <div className="space-y-2 mb-4">
-      <div className="flex items-center gap-2">
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
+    <div className="space-y-2 mb-3 sm:mb-4">
+      {/* Mobile: Search full width */}
+      <div className="sm:hidden">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--crm-text-muted)]" />
+          <input
+            type="text"
+            placeholder="Buscar leads…"
+            value={filters.search}
+            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            className="crm-input w-full pl-8 pr-8 h-9 crm-focus-ring"
+          />
+          {filters.search && (
+            <button
+              onClick={() => onFiltersChange({ ...filters, search: '' })}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Desktop: Search */}
+        <div className="hidden sm:block relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--crm-text-muted)]" />
           <input
             type="text"
@@ -106,7 +128,7 @@ export function KanbanTopBar({ filters, onFiltersChange, activeFilterCount, user
           )}
         </div>
 
-        {/* Quick filter chips */}
+        {/* Quick filter chips - desktop only */}
         <div className="hidden sm:flex items-center gap-1.5">
           {QUICK_FILTERS.map((qf) => {
             const isActive = filters.quickFilters.includes(qf.id)
@@ -133,9 +155,10 @@ export function KanbanTopBar({ filters, onFiltersChange, activeFilterCount, user
           value={filters.sortOrder}
           onValueChange={(v) => onFiltersChange({ ...filters, sortOrder: v as SortOrder })}
         >
-          <SelectTrigger className="h-8 w-auto gap-1.5 text-[12px] font-medium text-[var(--crm-text-secondary)] border-[var(--crm-border)] bg-[var(--crm-bg-card)] rounded-[var(--crm-radius-md)] px-2.5 crm-focus-ring [&>svg]:hidden">
+          <SelectTrigger className="h-8 w-auto gap-1 sm:gap-1.5 text-[11px] sm:text-[12px] font-medium text-[var(--crm-text-secondary)] border-[var(--crm-border)] bg-[var(--crm-bg-card)] rounded-[var(--crm-radius-md)] px-2 sm:px-2.5 crm-focus-ring [&>svg]:hidden">
             <ArrowUpDown className="h-3.5 w-3.5 text-[var(--crm-text-muted)] shrink-0" />
-            <SelectValue />
+            <span className="hidden sm:inline"><SelectValue /></span>
+            <span className="sm:hidden"><SelectValue /></span>
           </SelectTrigger>
           <SelectContent>
             {SORT_OPTIONS.map((s) => (

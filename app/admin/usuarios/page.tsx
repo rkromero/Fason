@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   Plus, RefreshCw, Pencil, Trash2, UserPlus, Users, AlertTriangle,
-  Mail, Phone, Shield, Loader2,
+  Loader2,
 } from 'lucide-react'
 
 export default function UsuariosPage() {
@@ -23,7 +23,6 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Dialog state
   const [showDialog, setShowDialog] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [formNombre, setFormNombre] = useState('')
@@ -33,7 +32,6 @@ export default function UsuariosPage() {
   const [formPassword, setFormPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
 
   const fetchUsers = useCallback(async () => {
@@ -95,7 +93,7 @@ export default function UsuariosPage() {
     setSubmitting(true)
     try {
       if (editingUser) {
-        const body: any = { nombre: formNombre, email: formEmail, telefono: formTelefono || undefined, rol: formRol }
+        const body: Record<string, unknown> = { nombre: formNombre, email: formEmail, telefono: formTelefono || undefined, rol: formRol }
         if (formPassword) body.password = formPassword
         const res = await fetch(`/api/users/${editingUser.id}`, {
           method: 'PUT',
@@ -177,14 +175,14 @@ export default function UsuariosPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pt-12 md:pt-0">
         {/* Header */}
-        <div className="crm-header sticky top-0 z-10 shrink-0">
-          <div className="px-4 sm:px-6 py-3 sm:py-4">
-            <div className="flex items-center justify-between gap-4">
+        <div className="crm-header sticky top-12 md:top-0 z-10 shrink-0">
+          <div className="px-3 sm:px-6 py-2.5 sm:py-4">
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
               <div>
-                <h1 className="crm-title">Usuarios</h1>
-                <p className="crm-meta crm-mono mt-0.5">
+                <h1 className="crm-title text-[16px] sm:text-[18px]">Usuarios</h1>
+                <p className="crm-meta crm-mono mt-0.5 text-[10px] sm:text-[11px]">
                   {loading ? <span className="crm-skeleton inline-block w-16 h-3" /> : `${users.length} usuarios`}
                 </p>
               </div>
@@ -205,7 +203,7 @@ export default function UsuariosPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-4 sm:px-6 py-4">
+        <div className="flex-1 px-3 sm:px-6 py-3 sm:py-4">
           {error && !loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--crm-danger-light)]">
@@ -227,14 +225,15 @@ export default function UsuariosPage() {
             </div>
           )}
 
+          {/* Desktop table */}
           {!error && users.length > 0 && (
-            <div className="crm-card overflow-hidden">
+            <div className="hidden md:block crm-card overflow-hidden">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-[var(--crm-border-light)] bg-[var(--crm-bg-subtle)]">
                     <th className="px-3 py-2.5 crm-label">Usuario</th>
                     <th className="px-3 py-2.5 crm-label">Email</th>
-                    <th className="px-3 py-2.5 crm-label hidden sm:table-cell">Teléfono</th>
+                    <th className="px-3 py-2.5 crm-label">Teléfono</th>
                     <th className="px-3 py-2.5 crm-label">Rol</th>
                     <th className="px-3 py-2.5 crm-label">Estado</th>
                     <th className="px-3 py-2.5 crm-label text-right">Acciones</th>
@@ -251,12 +250,8 @@ export default function UsuariosPage() {
                           <span className="text-[13px] font-medium text-[var(--crm-text)]">{user.nombre}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5">
-                        <span className="crm-body">{user.email}</span>
-                      </td>
-                      <td className="px-3 py-2.5 hidden sm:table-cell">
-                        <span className="crm-meta">{user.telefono || '—'}</span>
-                      </td>
+                      <td className="px-3 py-2.5"><span className="crm-body">{user.email}</span></td>
+                      <td className="px-3 py-2.5"><span className="crm-meta">{user.telefono || '—'}</span></td>
                       <td className="px-3 py-2.5">
                         <span className={cn(
                           'crm-badge',
@@ -295,48 +290,116 @@ export default function UsuariosPage() {
             </div>
           )}
 
+          {/* Mobile card list */}
+          {!error && users.length > 0 && (
+            <div className="md:hidden space-y-2">
+              {users.map((user) => (
+                <div key={user.id} className="crm-card px-3 py-3">
+                  {/* Row 1: Avatar + Name + Role badge */}
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <span className={cn('flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-bold text-white shrink-0', getColor(user.nombre))}>
+                      {getInitial(user.nombre)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-[var(--crm-text)] truncate">{user.nombre}</p>
+                      <p className="text-[12px] text-[var(--crm-text-secondary)] truncate">{user.email}</p>
+                    </div>
+                    <span className={cn(
+                      'crm-badge !text-[10px] shrink-0',
+                      user.rol === 'admin' ? 'bg-violet-50 text-violet-700' :
+                      user.rol === 'vendedor' ? 'bg-blue-50 text-blue-700' :
+                      'bg-gray-100 text-gray-600'
+                    )}>
+                      {rolLabel(user.rol)}
+                    </span>
+                  </div>
+                  {/* Row 2: Status + Actions */}
+                  <div className="flex items-center gap-2 pl-[42px]">
+                    <button
+                      onClick={() => handleToggleActive(user)}
+                      className={cn(
+                        'crm-badge !text-[10px] cursor-pointer transition-colors',
+                        user.activo ? 'bg-[var(--crm-success-light)] text-[var(--crm-success)]' : 'bg-gray-100 text-gray-500'
+                      )}
+                    >
+                      {user.activo ? 'Activo' : 'Inactivo'}
+                    </button>
+                    {user.telefono && (
+                      <span className="text-[11px] text-[var(--crm-text-muted)]">{user.telefono}</span>
+                    )}
+                    <div className="flex-1" />
+                    <button onClick={() => openEditDialog(user)} className="h-8 w-8 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] active:bg-[var(--crm-bg-active)] transition-colors">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => setDeleteTarget(user)} className="h-8 w-8 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] active:bg-[var(--crm-danger-light)] transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {loading && (
-            <div className="crm-card overflow-hidden">
-              <div className="p-4 space-y-3">
+            <>
+              {/* Mobile skeleton */}
+              <div className="md:hidden space-y-2">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="crm-skeleton h-7 w-7 rounded-full" />
-                    <div className="crm-skeleton h-3 w-32" />
-                    <div className="crm-skeleton h-3 w-40 ml-4" />
-                    <div className="crm-skeleton h-5 w-16 ml-auto rounded" />
+                  <div key={i} className="crm-card px-3 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="crm-skeleton h-8 w-8 rounded-full" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="crm-skeleton h-3 w-28" />
+                        <div className="crm-skeleton h-2.5 w-36" />
+                      </div>
+                      <div className="crm-skeleton h-5 w-16 rounded" />
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+              {/* Desktop skeleton */}
+              <div className="hidden md:block crm-card overflow-hidden">
+                <div className="p-4 space-y-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="crm-skeleton h-7 w-7 rounded-full" />
+                      <div className="crm-skeleton h-3 w-32" />
+                      <div className="crm-skeleton h-3 w-40 ml-4" />
+                      <div className="crm-skeleton h-5 w-16 ml-auto rounded" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
 
       {/* Create/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle>{editingUser ? 'Editar usuario' : 'Nuevo usuario'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-[15px] sm:text-[16px]">{editingUser ? 'Editar usuario' : 'Nuevo usuario'}</DialogTitle>
+            <DialogDescription className="text-[12px] sm:text-[13px]">
               {editingUser ? 'Modificá los datos del usuario.' : 'Completá los datos para crear un nuevo usuario.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <label className="crm-label">Nombre <span className="text-red-500">*</span></label>
-              <Input value={formNombre} onChange={(e) => setFormNombre(e.target.value)} placeholder="Nombre completo" disabled={submitting} />
+              <label className="crm-label text-[11px] sm:text-[12px]">Nombre <span className="text-red-500">*</span></label>
+              <Input value={formNombre} onChange={(e) => setFormNombre(e.target.value)} placeholder="Nombre completo" disabled={submitting} className="h-9 sm:h-10" />
             </div>
             <div className="space-y-1.5">
-              <label className="crm-label">Email <span className="text-red-500">*</span></label>
-              <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="email@ejemplo.com" disabled={submitting} />
+              <label className="crm-label text-[11px] sm:text-[12px]">Email <span className="text-red-500">*</span></label>
+              <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="email@ejemplo.com" disabled={submitting} className="h-9 sm:h-10" />
             </div>
             <div className="space-y-1.5">
-              <label className="crm-label">Teléfono</label>
-              <Input value={formTelefono} onChange={(e) => setFormTelefono(e.target.value)} placeholder="+54 11 1234-5678" disabled={submitting} />
+              <label className="crm-label text-[11px] sm:text-[12px]">Teléfono</label>
+              <Input value={formTelefono} onChange={(e) => setFormTelefono(e.target.value)} placeholder="+54 11 1234-5678" disabled={submitting} className="h-9 sm:h-10" />
             </div>
             <div className="space-y-1.5">
-              <label className="crm-label">
+              <label className="crm-label text-[11px] sm:text-[12px]">
                 Contraseña {!editingUser && <span className="text-red-500">*</span>}
               </label>
               <Input
@@ -345,12 +408,13 @@ export default function UsuariosPage() {
                 onChange={(e) => setFormPassword(e.target.value)}
                 placeholder={editingUser ? 'Dejar vacío para no cambiar' : 'Mínimo 6 caracteres'}
                 disabled={submitting}
+                className="h-9 sm:h-10"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="crm-label">Rol</label>
+              <label className="crm-label text-[11px] sm:text-[12px]">Rol</label>
               <Select value={formRol} onValueChange={(v) => setFormRol(v as UserRole)} disabled={submitting}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 sm:h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {USER_ROLES.map((r) => <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>)}
                 </SelectContent>
@@ -358,9 +422,9 @@ export default function UsuariosPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)} disabled={submitting}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="crm-btn-primary">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowDialog(false)} disabled={submitting} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={submitting} className="crm-btn-primary w-full sm:w-auto">
               {submitting ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> Guardando...</> : editingUser ? 'Guardar cambios' : 'Crear usuario'}
             </Button>
           </DialogFooter>
@@ -369,16 +433,16 @@ export default function UsuariosPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle>Eliminar usuario</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de eliminar a <strong>{deleteTarget?.nombre}</strong>? Los leads asignados a este usuario quedarán sin asignar.
+            <DialogTitle className="text-[15px]">Eliminar usuario</DialogTitle>
+            <DialogDescription className="text-[12px] sm:text-[13px]">
+              ¿Estás seguro de eliminar a <strong>{deleteTarget?.nombre}</strong>? Los leads asignados quedarán sin asignar.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">Eliminar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { LeadDrawer } from './lead-drawer'
 import {
   AlertCircle, CalendarCheck, Mail, MessageCircle, Phone,
-  ArrowUpDown, ArrowUp, ArrowDown,
+  ArrowUpDown, ArrowUp, ArrowDown, ChevronRight,
 } from 'lucide-react'
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -93,7 +93,8 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
 
   return (
     <>
-      <div className="crm-card overflow-hidden">
+      {/* ─── Desktop table ─── */}
+      <div className="hidden md:block crm-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -141,7 +142,6 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
                       overdueCount > 0 && 'bg-[var(--crm-danger-light)]/30'
                     )}
                   >
-                    {/* Nombre */}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2 min-w-[160px]">
                         <span className={cn('h-2 w-2 rounded-full shrink-0', getPriorityDot(lead.priority))} />
@@ -153,21 +153,15 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
                         )}
                       </div>
                     </td>
-
-                    {/* Empresa */}
                     <td className="px-3 py-2.5">
                       <span className="crm-body truncate max-w-[140px] block">{lead.empresa}</span>
                     </td>
-
-                    {/* Etapa */}
                     <td className="px-3 py-2.5">
                       <span className={cn('crm-badge', stageConfig?.badge)}>
                         <span className={cn('h-1.5 w-1.5 rounded-full mr-1', stageConfig?.dot)} />
                         {stageConfig?.label}
                       </span>
                     </td>
-
-                    {/* Owner */}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
                         <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0', getOwnerColor(lead.owner))}>
@@ -176,8 +170,6 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
                         <span className="crm-meta truncate max-w-[80px]">{lead.owner || 'Sin asignar'}</span>
                       </div>
                     </td>
-
-                    {/* Monto */}
                     <td className="px-3 py-2.5">
                       {lead.inversionEstimada ? (
                         <span className="text-[13px] font-medium text-[var(--crm-text)] crm-mono">${lead.inversionEstimada}</span>
@@ -185,8 +177,6 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
                         <span className="crm-meta">—</span>
                       )}
                     </td>
-
-                    {/* Próxima tarea */}
                     <td className="px-3 py-2.5">
                       {nextTask ? (
                         <span className={cn(
@@ -203,15 +193,11 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
                         <span className="crm-meta">Sin tarea</span>
                       )}
                     </td>
-
-                    {/* Actualizado */}
                     <td className="px-3 py-2.5">
                       <span className="crm-meta crm-mono whitespace-nowrap">
                         {new Date(lead.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                       </span>
                     </td>
-
-                    {/* Acciones */}
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
                         <Tooltip>
@@ -252,6 +238,87 @@ export function LeadsListView({ leads, onUpdateLead, onDeleteLead }: LeadsListVi
             <p className="crm-body">Sin leads para mostrar</p>
           </div>
         )}
+      </div>
+
+      {/* ─── Mobile card list ─── */}
+      <div className="md:hidden space-y-2">
+        {sorted.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="crm-body">Sin leads para mostrar</p>
+          </div>
+        )}
+        {sorted.map((lead) => {
+          const stageConfig = STAGES.find((s) => s.id === lead.stage)
+          const nextTask = getNextTask(lead)
+          const overdueCount = getOverdueTaskCount(lead)
+          const taskOverdue = nextTask ? isTaskOverdue(nextTask) : false
+
+          return (
+            <div
+              key={lead.id}
+              onClick={() => setSelectedLead(lead)}
+              className={cn(
+                'crm-card px-3 py-3 cursor-pointer active:scale-[0.99] transition-all',
+                overdueCount > 0 && 'border-l-2 border-l-[var(--crm-danger)]'
+              )}
+            >
+              {/* Row 1: Name + Stage */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={cn('h-2 w-2 rounded-full shrink-0', getPriorityDot(lead.priority))} />
+                <span className="text-[13px] font-medium text-[var(--crm-text)] flex-1 truncate">{lead.nombre}</span>
+                {overdueCount > 0 && (
+                  <span className="flex items-center gap-0.5 crm-badge !px-1 !py-0 !text-[9px] !font-bold bg-[var(--crm-danger-light)] text-[var(--crm-danger)] shrink-0">
+                    <AlertCircle className="h-2.5 w-2.5" />{overdueCount}
+                  </span>
+                )}
+                <span className={cn('crm-badge !text-[10px]', stageConfig?.badge)}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full mr-1', stageConfig?.dot)} />
+                  {stageConfig?.label}
+                </span>
+              </div>
+
+              {/* Row 2: Company + Owner */}
+              <div className="flex items-center gap-2 mb-1.5 pl-4">
+                <span className="text-[12px] text-[var(--crm-text-secondary)] flex-1 truncate">{lead.empresa}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn('flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white', getOwnerColor(lead.owner))}>
+                    {getOwnerInitial(lead.owner)}
+                  </span>
+                  <span className="text-[11px] text-[var(--crm-text-muted)] truncate max-w-[60px]">{lead.owner || 'N/A'}</span>
+                </div>
+              </div>
+
+              {/* Row 3: Monto + Next Task + Actions */}
+              <div className="flex items-center gap-2 pl-4">
+                {lead.inversionEstimada && (
+                  <span className="text-[12px] font-medium text-[var(--crm-text)] crm-mono shrink-0">${lead.inversionEstimada}</span>
+                )}
+                {nextTask && (
+                  <span className={cn(
+                    'inline-flex items-center gap-0.5 crm-badge !text-[9px] !px-1.5',
+                    taskOverdue
+                      ? 'bg-[var(--crm-danger-light)] text-[var(--crm-danger)]'
+                      : 'bg-[var(--crm-warning-light)] text-[var(--crm-warning)]'
+                  )}>
+                    <CalendarCheck className="h-2.5 w-2.5" />
+                    <span className="truncate max-w-[80px]">{nextTask.description}</span>
+                  </span>
+                )}
+                <div className="flex-1" />
+                {/* Mobile quick actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={(e) => handleWhatsApp(e, lead)} className="h-7 w-7 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-success)] active:bg-[var(--crm-success-light)] transition-colors">
+                    <MessageCircle className="h-4 w-4" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }} className="h-7 w-7 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] active:bg-[var(--crm-bg-hover)] transition-colors">
+                    <Phone className="h-4 w-4" />
+                  </button>
+                  <ChevronRight className="h-4 w-4 text-[var(--crm-text-muted)]" />
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {selectedLead && (

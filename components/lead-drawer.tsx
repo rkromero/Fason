@@ -231,20 +231,20 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <SheetHeader className="px-5 pt-5 pb-3 border-b border-[var(--crm-border-light)] shrink-0">
-          <div className="flex items-start gap-3">
-            <span className={cn('flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white shrink-0 mt-0.5', getOwnerColor(lead.owner))}>
+        <SheetHeader className="px-3 sm:px-5 pt-3 sm:pt-5 pb-2 sm:pb-3 border-b border-[var(--crm-border-light)] shrink-0">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <span className={cn('flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xs sm:text-sm font-bold text-white shrink-0 mt-0.5', getOwnerColor(lead.owner))}>
               {getOwnerInitial(lead.owner)}
             </span>
             <div className="flex-1 min-w-0">
-              <SheetTitle className="text-[15px] font-semibold text-[var(--crm-text)] truncate">{lead.nombre}</SheetTitle>
-              <SheetDescription className="flex items-center gap-1.5 text-[13px] text-[var(--crm-text-secondary)] mt-0.5">
+              <SheetTitle className="text-[14px] sm:text-[15px] font-semibold text-[var(--crm-text)] truncate">{lead.nombre}</SheetTitle>
+              <SheetDescription className="flex items-center gap-1.5 text-[12px] sm:text-[13px] text-[var(--crm-text-secondary)] mt-0.5">
                 <Building2 className="h-3 w-3 shrink-0" />
                 <span className="truncate">{lead.empresa}</span>
               </SheetDescription>
             </div>
             <Select value={currentStage} onValueChange={handleStageChange} disabled={isUpdating}>
-              <SelectTrigger className="h-7 w-auto gap-1.5 text-[12px] font-medium border-[var(--crm-border)] rounded-[var(--crm-radius-md)] px-2.5 shrink-0">
+              <SelectTrigger className="h-7 w-auto gap-1 sm:gap-1.5 text-[11px] sm:text-[12px] font-medium border-[var(--crm-border)] rounded-[var(--crm-radius-md)] px-2 sm:px-2.5 shrink-0">
                 <span className={cn('h-2 w-2 rounded-full', stageConfig?.dot)} />
                 <SelectValue />
               </SelectTrigger>
@@ -261,14 +261,14 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
             </Select>
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-0.5 mt-3 -mb-[1px]">
+          {/* Tabs - scrollable on mobile */}
+          <div className="flex items-center gap-0.5 mt-2 sm:mt-3 -mb-[1px] overflow-x-auto scrollbar-hide">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  'px-3 py-1.5 text-[12px] font-medium rounded-t-[var(--crm-radius-md)] border border-b-0 transition-colors',
+                  'px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-[12px] font-medium rounded-t-[var(--crm-radius-md)] border border-b-0 transition-colors whitespace-nowrap',
                   tab === t.id
                     ? 'bg-[var(--crm-bg-card)] text-[var(--crm-text)] border-[var(--crm-border-light)]'
                     : 'text-[var(--crm-text-muted)] border-transparent hover:text-[var(--crm-text-secondary)]'
@@ -287,17 +287,17 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
         <div className="flex-1 overflow-y-auto">
           {/* ═══ RESUMEN ═══ */}
           {tab === 'resumen' && (
-            <div className="px-5 py-4 space-y-4">
+            <div className="px-3 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
               {/* Acciones rápidas */}
               <div className="flex items-center gap-1.5">
-                <Button variant="outline" size="sm" className="h-7 text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]" onClick={() => window.open(`mailto:${lead.email}`, '_blank')}>
-                  <Mail className="h-3 w-3" /> Email
+                <Button variant="outline" size="sm" className="h-8 sm:h-7 flex-1 sm:flex-none text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]" onClick={() => window.open(`mailto:${lead.email}`, '_blank')}>
+                  <Mail className="h-3.5 sm:h-3 w-3.5 sm:w-3" /> <span className="hidden sm:inline">Email</span>
                 </Button>
-                <Button variant="outline" size="sm" className="h-7 text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]" onClick={() => window.open(`tel:${lead.telefono}`, '_blank')}>
-                  <Phone className="h-3 w-3" /> Llamar
+                <Button variant="outline" size="sm" className="h-8 sm:h-7 flex-1 sm:flex-none text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]" onClick={() => window.open(`tel:${lead.telefono}`, '_blank')}>
+                  <Phone className="h-3.5 sm:h-3 w-3.5 sm:w-3" /> Llamar
                 </Button>
-                <Button variant="outline" size="sm" className="h-7 text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-success)] hover:bg-[var(--crm-success-light)]" onClick={handleWhatsAppClick}>
-                  <MessageCircle className="h-3 w-3" /> WhatsApp
+                <Button variant="outline" size="sm" className="h-8 sm:h-7 flex-1 sm:flex-none text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-success)] hover:bg-[var(--crm-success-light)]" onClick={handleWhatsAppClick}>
+                  <MessageCircle className="h-3.5 sm:h-3 w-3.5 sm:w-3" /> WhatsApp
                 </Button>
               </div>
 
@@ -307,52 +307,52 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                   <p className="crm-label font-semibold">Información del lead</p>
                 </div>
                 <div className="divide-y divide-[var(--crm-border-light)]">
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Nombre</span>
-                    <span className="crm-body font-medium text-[var(--crm-text)]">{lead.nombre}</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Nombre</span>
+                    <span className="crm-body font-medium text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.nombre}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Empresa</span>
-                    <span className="crm-body font-medium text-[var(--crm-text)]">{lead.empresa}</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Empresa</span>
+                    <span className="crm-body font-medium text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.empresa}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Email</span>
-                    <a href={`mailto:${lead.email}`} className="crm-body text-[var(--crm-primary)] hover:underline truncate">{lead.email}</a>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Email</span>
+                    <a href={`mailto:${lead.email}`} className="crm-body text-[var(--crm-primary)] hover:underline truncate text-[12px] sm:text-[13px]">{lead.email}</a>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Teléfono</span>
-                    <a href={`tel:${lead.telefono}`} className="crm-body text-[var(--crm-primary)] hover:underline">{lead.telefono}</a>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Teléfono</span>
+                    <a href={`tel:${lead.telefono}`} className="crm-body text-[var(--crm-primary)] hover:underline text-[12px] sm:text-[13px]">{lead.telefono}</a>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Producto</span>
-                    <span className="crm-body text-[var(--crm-text)]">{lead.producto === 'alfajores' ? 'Alfajores' : 'Galletitas'}</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Producto</span>
+                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.producto === 'alfajores' ? 'Alfajores' : 'Galletitas'}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Marca registrada</span>
-                    <span className="crm-body text-[var(--crm-text)]">{lead.marca === 'si' ? 'Sí' : 'No'}</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Marca</span>
+                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.marca === 'si' ? 'Sí' : 'No'}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Volumen mensual</span>
-                    <span className="crm-body text-[var(--crm-text)]">
-                      {lead.volumen === 'menos-1000' ? 'Menos de 1,000 u/mes' : lead.volumen === '1000-5000' ? '1,000 - 5,000 u/mes' : 'Más de 5,000 u/mes'}
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Volumen</span>
+                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">
+                      {lead.volumen === 'menos-1000' ? '<1,000 u/mes' : lead.volumen === '1000-5000' ? '1-5K u/mes' : '>5K u/mes'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Envasado</span>
-                    <span className="crm-body text-[var(--crm-text)]">
-                      {lead.envasado === 'flowpack-personalizado' ? 'Flowpack Personalizado' : lead.envasado === 'flowpack-cristal' ? 'Flowpack Cristal' : 'A Granel'}
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Envasado</span>
+                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">
+                      {lead.envasado === 'flowpack-personalizado' ? 'Flowpack Pers.' : lead.envasado === 'flowpack-cristal' ? 'Flowpack Cristal' : 'A Granel'}
                     </span>
                   </div>
                   {lead.inversionEstimada && (
-                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                      <span className="crm-meta">Inversión estimada</span>
-                      <span className="crm-body font-semibold text-[var(--crm-text)] crm-mono">${lead.inversionEstimada}</span>
+                    <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta text-[11px] sm:text-[12px]">Inversión</span>
+                      <span className="crm-body font-semibold text-[var(--crm-text)] crm-mono text-[12px] sm:text-[13px]">${lead.inversionEstimada}</span>
                     </div>
                   )}
                   {lead.mensaje && (
-                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                      <span className="crm-meta">Mensaje</span>
-                      <span className="crm-body text-[var(--crm-text)]">{lead.mensaje}</span>
+                    <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta text-[11px] sm:text-[12px]">Mensaje</span>
+                      <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.mensaje}</span>
                     </div>
                   )}
                 </div>
@@ -364,27 +364,27 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                   <p className="crm-label font-semibold">Estado del pipeline</p>
                 </div>
                 <div className="divide-y divide-[var(--crm-border-light)]">
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Etapa</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Etapa</span>
                     <span className={cn('crm-badge inline-flex w-fit', stageConfig?.badge)}>
                       <span className={cn('h-1.5 w-1.5 rounded-full mr-1', stageConfig?.dot)} />
                       {stageConfig?.label}
                     </span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Días en pipeline</span>
-                    <span className="crm-body crm-mono text-[var(--crm-text)]">{ageDays} días</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Pipeline</span>
+                    <span className="crm-body crm-mono text-[var(--crm-text)] text-[12px] sm:text-[13px]">{ageDays} días</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Creado</span>
-                    <span className="crm-body crm-mono text-[var(--crm-text)]">{new Date(lead.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Creado</span>
+                    <span className="crm-body crm-mono text-[var(--crm-text)] text-[12px] sm:text-[13px]">{new Date(lead.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta">Actualizado</span>
-                    <span className="crm-body crm-mono text-[var(--crm-text)]">{new Date(lead.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Actualizado</span>
+                    <span className="crm-body crm-mono text-[var(--crm-text)] text-[12px] sm:text-[13px]">{new Date(lead.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] px-3 py-2 items-center">
-                    <span className="crm-meta">Asignado a</span>
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2 items-center">
+                    <span className="crm-meta text-[11px] sm:text-[12px]">Asignado a</span>
                     <Select
                       value={lead.ownerId || 'sin-asignar'}
                       onValueChange={(val) => {
@@ -454,7 +454,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
           {/* ═══ TAREAS ═══ */}
           {tab === 'tareas' && (
-            <div className="px-5 py-4 space-y-4">
+            <div className="px-3 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="crm-label">Tareas pendientes ({pendingTasks.length})</span>
                 <button onClick={() => setShowTaskForm(!showTaskForm)} className="crm-meta hover:text-[var(--crm-text-secondary)] flex items-center gap-1 transition-colors">
@@ -513,7 +513,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                           {task.notes && ` · ${task.notes}`}
                         </p>
                       </div>
-                      <button onClick={() => handleDeleteTask(task.id)} className="opacity-0 group-hover/task:opacity-100 text-[var(--crm-text-muted)] hover:text-[var(--crm-danger)] transition-all shrink-0 mt-0.5">
+                      <button onClick={() => handleDeleteTask(task.id)} className="opacity-100 sm:opacity-0 sm:group-hover/task:opacity-100 text-[var(--crm-text-muted)] hover:text-[var(--crm-danger)] transition-all shrink-0 mt-0.5">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -543,7 +543,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
           {/* ═══ TIMELINE ═══ */}
           {tab === 'timeline' && (
-            <div className="px-5 py-4">
+            <div className="px-3 sm:px-5 py-3 sm:py-4">
               <div className="flex items-start gap-2 mb-4">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)] shrink-0 mt-0.5">
                   <Plus className="h-3.5 w-3.5 text-[var(--crm-text-muted)]" />
@@ -582,7 +582,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
           {/* ═══ FICHA FASON ═══ */}
           {tab === 'ficha' && (
-            <div className="px-5 py-4 space-y-4">
+            <div className="px-3 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Package className="h-4 w-4 text-[var(--crm-text-muted)]" />
                 <span className="crm-label">Ficha de producción</span>
