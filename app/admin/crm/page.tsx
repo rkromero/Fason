@@ -185,9 +185,9 @@ export default function CRMPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pt-12 md:pt-0">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pb-[72px] md:pb-0">
         {/* ─── Sticky header ───────────────────────────── */}
-        <div className="crm-header sticky top-12 md:top-0 z-10 shrink-0">
+        <div className="crm-header sticky top-0 z-10 shrink-0">
           <div className="px-3 sm:px-6 py-2.5 sm:py-4">
             {/* Row 1: Title + Actions */}
             <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-3">
