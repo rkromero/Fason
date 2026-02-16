@@ -186,6 +186,7 @@ export async function POST(request: Request) {
     // Crear lead automáticamente en el CRM (datos originales sin escapar para la DB)
     try {
       const { createLead } = await import('@/lib/db/queries')
+      const { createActivity } = await import('@/lib/db/activity-queries')
       const newLead = await createLead({
         nombre,
         empresa,
@@ -199,6 +200,11 @@ export async function POST(request: Request) {
         inversionEstimada,
         stage: 'entrante',
         notes: [],
+        source: 'web',
+      })
+      await createActivity(newLead.id, {
+        type: 'created',
+        content: 'Lead creado automáticamente desde formulario web',
       })
       console.log('Lead creado automáticamente en el CRM:', newLead.id)
     } catch (leadError) {

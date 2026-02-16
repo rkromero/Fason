@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Lead, LeadStage, LeadTask, TaskType, Activity, STAGES, TASK_TYPES, LOST_REASONS, LostReason,
-  getNextTask, isTaskOverdue,
+  isTaskOverdue,
 } from '@/lib/types/lead'
 import { User } from '@/lib/types/user'
 import {
@@ -32,21 +32,6 @@ interface LeadDrawerProps {
 type DrawerTab = 'resumen' | 'tareas' | 'timeline' | 'ficha'
 
 // ─── Helpers ────────────────────────────────────────────────────
-function buildTimeline(lead: Lead): Activity[] {
-  const entries: Activity[] = []
-  entries.push({ id: 'created', type: 'created', date: lead.createdAt, content: 'Lead creado' })
-  if (lead.activities && lead.activities.length > 0) {
-    entries.push(...lead.activities)
-  }
-  if (lead.notes && lead.notes.length > 0) {
-    lead.notes.forEach((note, i) => {
-      entries.push({ id: `note-${i}`, type: 'note', date: lead.updatedAt, content: note })
-    })
-  }
-  entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  return entries
-}
-
 function getTimelineIcon(type: Activity['type']) {
   const map: Record<string, { icon: typeof FileText; color: string; bg: string }> = {
     note: { icon: FileText, color: 'text-[var(--crm-text-muted)]', bg: 'bg-[var(--crm-bg-subtle)]' },
@@ -85,12 +70,18 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
   const [isUpdating, setIsUpdating] = useState(false)
   const [newNote, setNewNote] = useState('')
 
-  // Task form
+  // Tasks (from API)
+  const [tasks, setTasks] = useState<LeadTask[]>([])
+  const [tasksLoaded, setTasksLoaded] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskType, setTaskType] = useState<TaskType>('llamada')
   const [taskDesc, setTaskDesc] = useState('')
   const [taskDate, setTaskDate] = useState('')
   const [taskNotes, setTaskNotes] = useState('')
+
+  // Activities (from API)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [activitiesLoaded, setActivitiesLoaded] = useState(false)
 
   // Lost reason
   const [showLostDialog, setShowLostDialog] = useState(false)
@@ -103,6 +94,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
   // Users for owner assignment
   const [availableUsers, setAvailableUsers] = useState<User[]>([])
+
   useEffect(() => {
     fetch('/api/users')
       .then((r) => r.ok ? r.json() : { users: [] })
@@ -110,10 +102,61 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
       .catch(() => {})
   }, [])
 
-  const timeline = useMemo(() => buildTimeline(lead), [lead])
-  const tasks = lead.tasks || []
-  const pendingTasks = tasks.filter((t) => t.status !== 'done').sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-  const doneTasks = tasks.filter((t) => t.status === 'done')
+  // Fetch tasks from API
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/tasks`)
+      if (res.ok) {
+        const data = await res.json()
+        setTasks(data.tasks || [])
+      }
+    } catch {
+      console.error('Error fetching tasks')
+    } finally {
+      setTasksLoaded(true)
+    }
+  }, [lead.id])
+
+  // Fetch activities from API
+  const fetchActivities = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/activities`)
+      if (res.ok) {
+        const data = await res.json()
+        setActivities(data.activities || [])
+      }
+    } catch {
+      console.error('Error fetching activities')
+    } finally {
+      setActivitiesLoaded(true)
+    }
+  }, [lead.id])
+
+  // Load tasks + activities when drawer opens
+  useEffect(() => {
+    if (open) {
+      setTasksLoaded(false)
+      setActivitiesLoaded(false)
+      fetchTasks()
+      fetchActivities()
+    }
+  }, [open, lead.id, fetchTasks, fetchActivities])
+
+  const pendingTasks = useMemo(() =>
+    tasks.filter((t) => t.status !== 'done').sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+    [tasks]
+  )
+  const doneTasks = useMemo(() => tasks.filter((t) => t.status === 'done'), [tasks])
+
+  // Build timeline from activities + "created" entry
+  const timeline = useMemo(() => {
+    const entries: Activity[] = [
+      { id: 'created', type: 'created', date: lead.createdAt, content: 'Lead creado' },
+      ...activities,
+    ]
+    entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return entries
+  }, [activities, lead.createdAt])
 
   useEffect(() => {
     setCurrentStage(lead.stage)
@@ -131,21 +174,43 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
     }
   }
 
-  const handleStageChange = (newStage: LeadStage) => {
+  const handleStageChange = async (newStage: LeadStage) => {
     if (newStage === lead.stage) return
     if (newStage === 'perdido') {
       setPendingStage(newStage)
       setShowLostDialog(true)
       return
     }
+    const oldStage = currentStage
     setCurrentStage(newStage)
-    doUpdate({ stage: newStage })
+    await doUpdate({ stage: newStage })
+    // Log stage change activity
+    await fetch(`/api/leads/${lead.id}/activities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'stage-change',
+        content: `Etapa cambiada: ${STAGES.find(s => s.id === oldStage)?.label} → ${STAGES.find(s => s.id === newStage)?.label}`,
+        metadata: { from: oldStage, to: newStage },
+      }),
+    })
+    fetchActivities()
   }
 
-  const handleConfirmLost = () => {
+  const handleConfirmLost = async () => {
     if (!lostReason) { toast.error('Seleccioná un motivo'); return }
     setCurrentStage('perdido')
-    doUpdate({ stage: 'perdido', lostReason: lostReason as LostReason, lostNotes: lostNotes || undefined })
+    await doUpdate({ stage: 'perdido', lostReason: lostReason as LostReason, lostNotes: lostNotes || undefined })
+    await fetch(`/api/leads/${lead.id}/activities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'stage-change',
+        content: `Lead perdido: ${lostReason}${lostNotes ? ` — ${lostNotes}` : ''}`,
+        metadata: { reason: lostReason },
+      }),
+    })
+    fetchActivities()
     setShowLostDialog(false)
     setLostReason('')
     setLostNotes('')
@@ -154,58 +219,98 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return
-    const updatedNotes = [...(lead.notes || []), newNote.trim()]
-    await doUpdate({ notes: updatedNotes })
-    setNewNote('')
-  }
-
-  const handleAddTask = () => {
-    if (!taskDesc.trim() || !taskDate) { toast.error('Completá descripción y fecha'); return }
-    const newTask: LeadTask = {
-      id: `task-${Date.now()}`,
-      type: taskType,
-      description: taskDesc.trim(),
-      dueDate: new Date(taskDate).toISOString(),
-      notes: taskNotes || undefined,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+    setIsUpdating(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'note', content: newNote.trim() }),
+      })
+      if (res.ok) {
+        setNewNote('')
+        fetchActivities()
+        toast.success('Nota agregada')
+      }
+    } catch {
+      toast.error('Error al agregar nota')
+    } finally {
+      setIsUpdating(false)
     }
-    const updated = [...tasks, newTask]
-    const nextPending = updated.filter((t) => t.status !== 'done').sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]
-    doUpdate({
-      tasks: updated,
-      nextTaskDate: nextPending?.dueDate,
-      nextTaskDescription: nextPending?.description,
-    })
-    setShowTaskForm(false)
-    setTaskDesc('')
-    setTaskDate('')
-    setTaskNotes('')
-    setTaskType('llamada')
   }
 
-  const handleCompleteTask = (taskId: string) => {
-    const updated = tasks.map((t) => t.id === taskId ? { ...t, status: 'done' as const, completedAt: new Date().toISOString() } : t)
-    const nextPending = updated.filter((t) => t.status !== 'done').sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]
-    doUpdate({
-      tasks: updated,
-      nextTaskDate: nextPending?.dueDate,
-      nextTaskDescription: nextPending?.description,
-    })
+  const handleAddTask = async () => {
+    if (!taskDesc.trim() || !taskDate) { toast.error('Completá descripción y fecha'); return }
+    setIsUpdating(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: taskType,
+          description: taskDesc.trim(),
+          dueDate: new Date(taskDate).toISOString(),
+          notes: taskNotes || undefined,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTasks(data.tasks || [])
+        setShowTaskForm(false)
+        setTaskDesc('')
+        setTaskDate('')
+        setTaskNotes('')
+        setTaskType('llamada')
+        toast.success('Tarea creada')
+      }
+    } catch {
+      toast.error('Error al crear tarea')
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
-  const handleDeleteTask = (taskId: string) => {
-    const updated = tasks.filter((t) => t.id !== taskId)
-    const nextPending = updated.filter((t) => t.status !== 'done').sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0]
-    doUpdate({
-      tasks: updated,
-      nextTaskDate: nextPending?.dueDate || undefined,
-      nextTaskDescription: nextPending?.description || undefined,
-    })
+  const handleCompleteTask = async (taskId: string) => {
+    setIsUpdating(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', taskId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTasks(data.tasks || [])
+        toast.success('Tarea completada')
+        fetchActivities()
+      }
+    } catch {
+      toast.error('Error al completar tarea')
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
-  const handleSaveFicha = () => {
-    doUpdate({ fichaFason: ficha })
+  const handleDeleteTask = async (taskId: string) => {
+    setIsUpdating(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', taskId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTasks(data.tasks || [])
+      }
+    } catch {
+      toast.error('Error al eliminar tarea')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleSaveFicha = async () => {
+    await doUpdate({ fichaFason: ficha })
     toast.success('Ficha guardada')
   }
 
@@ -223,7 +328,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
   const TABS: Array<{ id: DrawerTab; label: string; count?: number }> = [
     { id: 'resumen', label: 'Resumen' },
     { id: 'tareas', label: 'Tareas', count: pendingTasks.length },
-    { id: 'timeline', label: 'Actividad', count: timeline.length },
+    { id: 'timeline', label: 'Actividad', count: activitiesLoaded ? activities.length : undefined },
     { id: 'ficha', label: 'Ficha Fason' },
   ]
 
@@ -261,7 +366,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
             </Select>
           </div>
 
-          {/* Tabs - scrollable on mobile */}
+          {/* Tabs */}
           <div className="flex items-center gap-0.5 mt-2 sm:mt-3 -mb-[1px] overflow-x-auto scrollbar-hide">
             {TABS.map((t) => (
               <button
@@ -307,54 +412,32 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                   <p className="crm-label font-semibold">Información del lead</p>
                 </div>
                 <div className="divide-y divide-[var(--crm-border-light)]">
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Nombre</span>
-                    <span className="crm-body font-medium text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.nombre}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Empresa</span>
-                    <span className="crm-body font-medium text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.empresa}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Email</span>
-                    <a href={`mailto:${lead.email}`} className="crm-body text-[var(--crm-primary)] hover:underline truncate text-[12px] sm:text-[13px]">{lead.email}</a>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Teléfono</span>
-                    <a href={`tel:${lead.telefono}`} className="crm-body text-[var(--crm-primary)] hover:underline text-[12px] sm:text-[13px]">{lead.telefono}</a>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Producto</span>
-                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.producto === 'alfajores' ? 'Alfajores' : 'Galletitas'}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Marca</span>
-                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.marca === 'si' ? 'Sí' : 'No'}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Volumen</span>
-                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">
-                      {lead.volumen === 'menos-1000' ? '<1,000 u/mes' : lead.volumen === '1000-5000' ? '1-5K u/mes' : '>5K u/mes'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                    <span className="crm-meta text-[11px] sm:text-[12px]">Envasado</span>
-                    <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">
-                      {lead.envasado === 'flowpack-personalizado' ? 'Flowpack Pers.' : lead.envasado === 'flowpack-cristal' ? 'Flowpack Cristal' : 'A Granel'}
-                    </span>
-                  </div>
-                  {lead.inversionEstimada && (
-                    <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                      <span className="crm-meta text-[11px] sm:text-[12px]">Inversión</span>
-                      <span className="crm-body font-semibold text-[var(--crm-text)] crm-mono text-[12px] sm:text-[13px]">${lead.inversionEstimada}</span>
+                  {[
+                    ['Nombre', lead.nombre],
+                    ['Empresa', lead.empresa],
+                    ['Email', lead.email, true],
+                    ['Teléfono', lead.telefono, false, true],
+                    ['Producto', lead.producto === 'alfajores' ? 'Alfajores' : 'Galletitas'],
+                    ['Marca', lead.marca === 'si' ? 'Sí' : 'No'],
+                    ['Volumen', lead.volumen === 'menos-1000' ? '<1,000 u/mes' : lead.volumen === '1000-5000' ? '1-5K u/mes' : '>5K u/mes'],
+                    ['Envasado', lead.envasado === 'flowpack-personalizado' ? 'Flowpack Pers.' : lead.envasado === 'flowpack-cristal' ? 'Flowpack Cristal' : 'A Granel'],
+                    ...(lead.inversionEstimada ? [['Inversión', `$${lead.inversionEstimada}`]] : []),
+                    ...(lead.source ? [['Fuente', lead.source]] : []),
+                    ...(lead.priority ? [['Prioridad', lead.priority]] : []),
+                    ...(lead.tags && lead.tags.length > 0 ? [['Tags', lead.tags.join(', ')]] : []),
+                    ...(lead.mensaje ? [['Mensaje', lead.mensaje]] : []),
+                  ].map(([label, value, isEmail, isPhone], i) => (
+                    <div key={i} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta text-[11px] sm:text-[12px]">{label}</span>
+                      {isEmail ? (
+                        <a href={`mailto:${value}`} className="crm-body text-[var(--crm-primary)] hover:underline truncate text-[12px] sm:text-[13px]">{value}</a>
+                      ) : isPhone ? (
+                        <a href={`tel:${value}`} className="crm-body text-[var(--crm-primary)] hover:underline text-[12px] sm:text-[13px]">{value}</a>
+                      ) : (
+                        <span className="crm-body font-medium text-[var(--crm-text)] text-[12px] sm:text-[13px]">{value}</span>
+                      )}
                     </div>
-                  )}
-                  {lead.mensaje && (
-                    <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] px-3 py-2">
-                      <span className="crm-meta text-[11px] sm:text-[12px]">Mensaje</span>
-                      <span className="crm-body text-[var(--crm-text)] text-[12px] sm:text-[13px]">{lead.mensaje}</span>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
 
@@ -415,7 +498,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
               </div>
 
               {/* Next task preview */}
-              {pendingTasks.length > 0 && (
+              {tasksLoaded && pendingTasks.length > 0 && (
                 <div className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-subtle)] px-3 py-2.5">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="crm-label">Próxima tarea</span>
@@ -482,7 +565,14 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                 </div>
               )}
 
-              {pendingTasks.length === 0 && !showTaskForm && (
+              {!tasksLoaded && (
+                <div className="text-center py-6">
+                  <div className="h-5 w-5 border-2 border-[var(--crm-border)] border-t-[var(--crm-primary)] rounded-full animate-spin mx-auto" />
+                  <p className="crm-meta mt-2">Cargando tareas...</p>
+                </div>
+              )}
+
+              {tasksLoaded && pendingTasks.length === 0 && !showTaskForm && (
                 <div className="text-center py-6">
                   <CalendarCheck className="h-8 w-8 text-[var(--crm-text-muted)] mx-auto mb-2 opacity-40" />
                   <p className="crm-body">Sin tareas pendientes</p>
@@ -499,7 +589,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                       'flex items-start gap-2.5 rounded-[var(--crm-radius-md)] border px-3 py-2 group/task',
                       overdue ? 'border-red-200 bg-[var(--crm-danger-light)]' : 'border-[var(--crm-border-light)] bg-[var(--crm-bg-card)]'
                     )}>
-                      <button onClick={() => handleCompleteTask(task.id)} className="mt-0.5 shrink-0 text-[var(--crm-text-muted)] hover:text-[var(--crm-success)] transition-colors">
+                      <button onClick={() => handleCompleteTask(task.id)} disabled={isUpdating} className="mt-0.5 shrink-0 text-[var(--crm-text-muted)] hover:text-[var(--crm-success)] transition-colors">
                         <Square className="h-4 w-4" />
                       </button>
                       <div className="flex-1 min-w-0">
@@ -513,7 +603,7 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                           {task.notes && ` · ${task.notes}`}
                         </p>
                       </div>
-                      <button onClick={() => handleDeleteTask(task.id)} className="opacity-100 sm:opacity-0 sm:group-hover/task:opacity-100 text-[var(--crm-text-muted)] hover:text-[var(--crm-danger)] transition-all shrink-0 mt-0.5">
+                      <button onClick={() => handleDeleteTask(task.id)} disabled={isUpdating} className="opacity-100 sm:opacity-0 sm:group-hover/task:opacity-100 text-[var(--crm-text-muted)] hover:text-[var(--crm-danger)] transition-all shrink-0 mt-0.5">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -556,27 +646,39 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                 </div>
               </div>
 
-              <div className="relative">
-                <div className="absolute left-[13px] top-0 bottom-0 w-px bg-[var(--crm-border-light)]" />
-                <div className="space-y-0">
-                  {timeline.map((entry) => {
-                    const config = getTimelineIcon(entry.type)
-                    const Icon = config.icon
-                    return (
-                      <div key={entry.id} className="relative flex items-start gap-3 py-2.5 group/entry">
-                        <div className={cn('flex h-7 w-7 items-center justify-center rounded-full shrink-0 relative z-[1] transition-transform group-hover/entry:scale-110', config.bg)}>
-                          <Icon className={cn('h-3.5 w-3.5', config.color)} />
-                        </div>
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <p className="crm-body leading-snug">{entry.content}</p>
-                          <p className="crm-meta crm-mono mt-0.5">{formatRelativeDate(entry.date)}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
+              {!activitiesLoaded && (
+                <div className="text-center py-6">
+                  <div className="h-5 w-5 border-2 border-[var(--crm-border)] border-t-[var(--crm-primary)] rounded-full animate-spin mx-auto" />
+                  <p className="crm-meta mt-2">Cargando actividad...</p>
                 </div>
-                {timeline.length === 0 && <div className="text-center py-6"><p className="crm-body">Sin actividad registrada</p></div>}
-              </div>
+              )}
+
+              {activitiesLoaded && (
+                <div className="relative">
+                  <div className="absolute left-[13px] top-0 bottom-0 w-px bg-[var(--crm-border-light)]" />
+                  <div className="space-y-0">
+                    {timeline.map((entry) => {
+                      const config = getTimelineIcon(entry.type)
+                      const Icon = config.icon
+                      return (
+                        <div key={entry.id} className="relative flex items-start gap-3 py-2.5 group/entry">
+                          <div className={cn('flex h-7 w-7 items-center justify-center rounded-full shrink-0 relative z-[1] transition-transform group-hover/entry:scale-110', config.bg)}>
+                            <Icon className={cn('h-3.5 w-3.5', config.color)} />
+                          </div>
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <p className="crm-body leading-snug">{entry.content}</p>
+                            {entry.metadata?.userName && (
+                              <p className="crm-meta text-[10px] mt-0.5">por {entry.metadata.userName}</p>
+                            )}
+                            <p className="crm-meta crm-mono mt-0.5">{formatRelativeDate(entry.date)}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {timeline.length <= 1 && <div className="text-center py-6"><p className="crm-body">Sin actividad registrada</p></div>}
+                </div>
+              )}
             </div>
           )}
 

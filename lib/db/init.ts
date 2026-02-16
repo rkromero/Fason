@@ -146,6 +146,77 @@ export async function initDatabase() {
       })
     }
 
+    // ─── Migraciones de campos faltantes en leads ────────────
+    await runMigration('leads_add_source_priority_tags', async () => {
+      if (!(await columnExists('leads', 'source'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN source VARCHAR(50)`)
+      }
+      if (!(await columnExists('leads', 'priority'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN priority VARCHAR(5)`)
+      }
+      if (!(await columnExists('leads', 'tags'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN tags TEXT[] DEFAULT '{}'`)
+      }
+    })
+
+    await runMigration('leads_add_lost_fields', async () => {
+      if (!(await columnExists('leads', 'lost_reason'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN lost_reason VARCHAR(255)`)
+      }
+      if (!(await columnExists('leads', 'lost_notes'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN lost_notes TEXT`)
+      }
+    })
+
+    await runMigration('leads_add_ficha_fason', async () => {
+      if (!(await columnExists('leads', 'ficha_fason'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN ficha_fason JSONB`)
+      }
+    })
+
+    await runMigration('leads_add_first_contact_date', async () => {
+      if (!(await columnExists('leads', 'first_contact_date'))) {
+        await pool.query(`ALTER TABLE leads ADD COLUMN first_contact_date TIMESTAMP WITH TIME ZONE`)
+      }
+    })
+
+    // ─── Tabla lead_tasks ──────────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS lead_tasks (
+        id VARCHAR(255) PRIMARY KEY,
+        lead_id VARCHAR(255) NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL DEFAULT 'otro',
+        description TEXT NOT NULL,
+        due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+        due_time VARCHAR(10),
+        notes TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'overdue')),
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        completed_at TIMESTAMP WITH TIME ZONE
+      )
+    `)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_lead_tasks_lead_id ON lead_tasks(lead_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_lead_tasks_status ON lead_tasks(status)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_lead_tasks_due_date ON lead_tasks(due_date)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_lead_tasks_lead_status ON lead_tasks(lead_id, status)`)
+    console.log('Tabla lead_tasks verificada')
+
+    // ─── Tabla lead_activities ─────────────────────────────────
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS lead_activities (
+        id VARCHAR(255) PRIMARY KEY,
+        lead_id VARCHAR(255) NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL DEFAULT 'note',
+        content TEXT NOT NULL,
+        metadata JSONB,
+        created_by VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_lead_activities_lead_id ON lead_activities(lead_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_lead_activities_created ON lead_activities(lead_id, created_at DESC)`)
+    console.log('Tabla lead_activities verificada')
+
     // Lead indexes
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC)`)

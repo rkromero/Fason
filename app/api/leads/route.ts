@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { Lead } from '@/lib/types/lead'
 import { getFilteredLeads, getConvertedLeads, getLeadCountsByStage, createLead } from '@/lib/db/queries'
+import { getTaskSummariesForLeads } from '@/lib/db/task-queries'
+import { createActivity } from '@/lib/db/activity-queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
 function withCache(response: NextResponse, maxAge = 15): NextResponse {
@@ -41,6 +43,26 @@ export async function GET(request: Request) {
       limit: parseInt(searchParams.get('limit') || '200', 10),
     })
 
+    // Enrich leads with task summaries (next task + overdue count)
+    if (result.leads.length > 0) {
+      try {
+        const leadIds = result.leads.map((l) => l.id)
+        const summaries = await getTaskSummariesForLeads(leadIds)
+        result.leads = result.leads.map((lead) => {
+          const summary = summaries[lead.id]
+          if (summary) {
+            return {
+              ...lead,
+              tasks: summary.nextTask ? [summary.nextTask] : [],
+              nextTaskDate: summary.nextTask?.dueDate,
+              nextTaskDescription: summary.nextTask?.description,
+            }
+          }
+          return lead
+        })
+      } catch { /* non-critical: task summaries are optional */ }
+    }
+
     return withCache(NextResponse.json(result, { status: 200 }))
   } catch (error) {
     console.error('Error al obtener leads:', error)
@@ -67,7 +89,18 @@ export async function POST(request: Request) {
     const newLead = await createLead({
       nombre, empresa, email, telefono, producto, marca, volumen, envasado,
       mensaje, inversionEstimada, stage: 'entrante', notes: [],
+      source: body.source || 'web',
     })
+
+    // Registrar actividad de creación
+    try {
+      const userId = request.headers.get('x-user-id') || undefined
+      await createActivity(newLead.id, {
+        type: 'created',
+        content: `Lead creado desde ${body.source === 'web' ? 'formulario web' : body.source || 'el CRM'}`,
+        createdBy: userId,
+      })
+    } catch { /* non-critical */ }
 
     return NextResponse.json({ lead: newLead }, { status: 201 })
   } catch (error) {

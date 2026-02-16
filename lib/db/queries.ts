@@ -21,6 +21,13 @@ const LEAD_SELECT = `
   l.updated_at as "updatedAt",
   l.notes,
   l.last_contact as "lastContact",
+  l.source,
+  l.priority,
+  l.tags,
+  l.lost_reason as "lostReason",
+  l.lost_notes as "lostNotes",
+  l.ficha_fason as "fichaFason",
+  l.first_contact_date as "firstContactDate",
   l.status,
   l.converted_at as "convertedAt",
   l.account_id as "accountId",
@@ -49,6 +56,13 @@ function mapRowToLead(row: any): Lead {
     updatedAt: row.updatedAt,
     notes: Array.isArray(row.notes) ? row.notes : (row.notes ? JSON.parse(row.notes) : []),
     lastContact: row.lastContact || undefined,
+    source: row.source || undefined,
+    priority: row.priority || undefined,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    lostReason: row.lostReason || undefined,
+    lostNotes: row.lostNotes || undefined,
+    fichaFason: row.fichaFason || undefined,
+    firstContactDate: row.firstContactDate || undefined,
     status: row.status || 'active',
     convertedAt: row.convertedAt || undefined,
     accountId: row.accountId || undefined,
@@ -212,14 +226,19 @@ export async function createLead(lead: Omit<Lead, 'id' | 'createdAt' | 'updatedA
   await pool.query(
     `INSERT INTO leads (
       id, nombre, empresa, email, telefono, producto, marca, volumen,
-      envasado, mensaje, inversion_estimada, monto_estimado, stage, owner_id, created_at, updated_at, notes
+      envasado, mensaje, inversion_estimada, monto_estimado, stage, owner_id,
+      source, priority, tags, lost_reason, lost_notes, ficha_fason,
+      created_at, updated_at, notes
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15, $16)`,
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $21, $22)`,
     [
       id, lead.nombre, lead.empresa, lead.email, lead.telefono,
       lead.producto, lead.marca, lead.volumen, lead.envasado,
       lead.mensaje || null, lead.inversionEstimada || null, montoEstimado,
-      lead.stage, lead.ownerId || null, now, JSON.stringify(lead.notes || []),
+      lead.stage, lead.ownerId || null,
+      lead.source || null, lead.priority || null, lead.tags || [], lead.lostReason || null, lead.lostNotes || null,
+      lead.fichaFason ? JSON.stringify(lead.fichaFason) : null,
+      now, JSON.stringify(lead.notes || []),
     ]
   )
 
@@ -254,6 +273,13 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
   if (updates.ownerId !== undefined) { fields.push(`owner_id = $${paramCount++}`); values.push(updates.ownerId || null) }
   if (updates.notes !== undefined) { fields.push(`notes = $${paramCount++}`); values.push(JSON.stringify(updates.notes)) }
   if (updates.lastContact !== undefined) { fields.push(`last_contact = $${paramCount++}`); values.push(updates.lastContact) }
+  if (updates.source !== undefined) { fields.push(`source = $${paramCount++}`); values.push(updates.source || null) }
+  if (updates.priority !== undefined) { fields.push(`priority = $${paramCount++}`); values.push(updates.priority || null) }
+  if (updates.tags !== undefined) { fields.push(`tags = $${paramCount++}`); values.push(updates.tags || []) }
+  if (updates.lostReason !== undefined) { fields.push(`lost_reason = $${paramCount++}`); values.push(updates.lostReason || null) }
+  if (updates.lostNotes !== undefined) { fields.push(`lost_notes = $${paramCount++}`); values.push(updates.lostNotes || null) }
+  if (updates.fichaFason !== undefined) { fields.push(`ficha_fason = $${paramCount++}`); values.push(JSON.stringify(updates.fichaFason)) }
+  if (updates.firstContactDate !== undefined) { fields.push(`first_contact_date = $${paramCount++}`); values.push(updates.firstContactDate) }
 
   fields.push(`updated_at = $${paramCount++}`)
   values.push(new Date().toISOString())
