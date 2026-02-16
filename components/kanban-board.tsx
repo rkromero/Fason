@@ -172,7 +172,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
         </div>
 
         {/* ─── Mobile: Column content (swipeable) ───── */}
-        <div ref={containerRef} className="md:hidden">
+        <div ref={containerRef} className="md:hidden overflow-hidden">
           <div
             className="flex transition-transform duration-300 ease-out"
             style={{ transform: `translateX(-${currentStageIndex * 100}%)` }}
