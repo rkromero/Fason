@@ -46,6 +46,9 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
   const handleDragStart = (event: DragStartEvent) => {
     const lead = leads.find((l) => l.id === event.active.id)
     setActiveLead(lead || null)
+    if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+      window.navigator.vibrate(10)
+    }
   }
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -63,6 +66,9 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
     setActiveLead(null)
     setOverColumnId(null)
     if (!over) return
+    if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+      window.navigator.vibrate(5)
+    }
     const leadId = active.id as string
     const newStage = over.id as LeadStage
     const isValidStage = STAGES.some((stage) => stage.id === newStage)
@@ -193,7 +199,19 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
               const stageLeads = leadsByStage[stage.id] || []
               return (
                 <div key={stage.id} className="w-full shrink-0">
-                  {stageLeads.length === 0 ? (
+                  {isLoading ? (
+                    <div className="space-y-3 p-1">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-[var(--crm-border)]" />
+                            <div className="h-3 w-3/4 bg-[var(--crm-border-light)] rounded" />
+                          </div>
+                          <div className="h-2.5 w-1/2 bg-[var(--crm-border-light)] rounded ml-4" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : stageLeads.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="h-10 w-10 rounded-full bg-[var(--crm-bg-subtle)] flex items-center justify-center mb-2">
                         <span className="text-[var(--crm-text-muted)] text-lg">0</span>
@@ -233,6 +251,7 @@ export function KanbanBoard({ leads, onUpdateLead, onDeleteLead, onQuickAdd, den
                     leadCount={stageLeads.length}
                     isOver={overColumnId === stage.id}
                     onQuickAdd={onQuickAdd}
+                    isLoading={isLoading}
                   >
                     <SortableContext items={stageLeads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                       {stageLeads.map((lead) => (

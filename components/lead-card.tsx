@@ -2,7 +2,20 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Lead, getNextTask, isTaskOverdue, getOverdueTaskCount } from '@/lib/types/lead'
+import {
+  Lead,
+  getNextTask,
+  isTaskOverdue,
+  getOverdueTaskCount,
+  getLeadAgeDays,
+  getLeadAgeLabel,
+  getLeadAgeStyle,
+  getPriorityStyle,
+  getOwnerInitial,
+  getOwnerColor,
+  getProductoLabel,
+  getVolumenLabel
+} from '@/lib/types/lead'
 import { Button } from '@/components/ui/button'
 import {
   MoreHorizontal,
@@ -54,64 +67,7 @@ interface LeadCardProps {
   density?: DensityMode
 }
 
-function getLeadAgeDays(createdAt: string): number {
-  return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)))
-}
 
-function getLeadAgeLabel(days: number): string {
-  if (days === 0) return 'Hoy'
-  if (days === 1) return '1d'
-  if (days < 7) return `${days}d`
-  if (days < 30) return `${Math.floor(days / 7)}sem`
-  return `${Math.floor(days / 30)}m`
-}
-
-function getLeadAgeStyle(days: number): string {
-  if (days <= 3) return 'text-[var(--crm-success)] bg-[var(--crm-success-light)]'
-  if (days <= 14) return 'text-[var(--crm-warning)] bg-[var(--crm-warning-light)]'
-  return 'text-[var(--crm-danger)] bg-[var(--crm-danger-light)]'
-}
-
-function getPriorityStyle(priority?: string) {
-  switch (priority) {
-    case 'A': return { label: 'A', cls: 'bg-[var(--crm-danger)]' }
-    case 'B': return { label: 'B', cls: 'bg-[var(--crm-warning)]' }
-    case 'C': return { label: 'C', cls: 'bg-[var(--crm-border)]' }
-    default:  return { label: '–', cls: 'bg-[var(--crm-border)]' }
-  }
-}
-
-function getOwnerInitial(owner?: string): string {
-  if (!owner) return '?'
-  return owner.charAt(0).toUpperCase()
-}
-
-const OWNER_COLORS = [
-  'bg-blue-600', 'bg-violet-600', 'bg-teal-600', 'bg-pink-600',
-  'bg-indigo-600', 'bg-orange-500', 'bg-emerald-600', 'bg-rose-500',
-]
-
-function getOwnerColor(owner?: string): string {
-  if (!owner) return 'bg-gray-400'
-  let hash = 0
-  for (let i = 0; i < owner.length; i++) {
-    hash = owner.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return OWNER_COLORS[Math.abs(hash) % OWNER_COLORS.length]
-}
-
-function getProductoLabel(producto: string) {
-  return producto === 'alfajores' ? 'Alfajores' : 'Galletitas'
-}
-
-function getVolumenLabel(volumen: string) {
-  switch (volumen) {
-    case 'menos-1000': return '<1K'
-    case '1000-5000': return '1-5K'
-    case 'mas-5000': return '>5K'
-    default: return volumen
-  }
-}
 
 export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead, onDeleteLead, density = 'comfortable' }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)

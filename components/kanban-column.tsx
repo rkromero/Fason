@@ -12,9 +12,10 @@ interface KanbanColumnProps {
   isOver?: boolean
   onQuickAdd?: (stageId: string) => void
   children: React.ReactNode
+  isLoading?: boolean
 }
 
-export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd, children }: KanbanColumnProps) {
+export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd, children, isLoading }: KanbanColumnProps) {
   const { setNodeRef, isOver: isDropOver } = useDroppable({ id: stage.id })
   const isActive = isOverProp || isDropOver
   const isEmpty = leadCount === 0
@@ -70,7 +71,19 @@ export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOve
 
       {/* Content with independent scroll */}
       <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 group relative">
-        {isEmpty ? (
+        {isLoading ? (
+          <div className="flex flex-col gap-3 p-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] p-3 space-y-2 opacity-60">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-[var(--crm-border)]" />
+                  <div className="h-3 w-3/4 bg-[var(--crm-border-light)] rounded" />
+                </div>
+                <div className="h-2.5 w-1/2 bg-[var(--crm-border-light)] rounded ml-4" />
+              </div>
+            ))}
+          </div>
+        ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)] mb-3">
               <Inbox className="h-5 w-5 text-[var(--crm-text-muted)]" />
@@ -115,7 +128,7 @@ export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOve
         )}
 
         {/* Drop indicator overlay */}
-        {isActive && !isEmpty && (
+        {isActive && !isEmpty && !isLoading && (
           <div className="absolute inset-0 border-2 border-dashed border-[var(--crm-primary)]/30 bg-[var(--crm-primary)]/[0.02] pointer-events-none z-[2]" />
         )}
       </div>

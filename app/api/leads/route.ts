@@ -4,6 +4,7 @@ import { getFilteredLeads, getConvertedLeads, getLeadCountsByStage, createLead }
 import { getTaskSummariesForLeads } from '@/lib/db/task-queries'
 import { createActivity } from '@/lib/db/activity-queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
+import { leadSchema } from '@/lib/validations/lead'
 
 function withCache(response: NextResponse, maxAge = 15): NextResponse {
   response.headers.set('Cache-Control', `private, max-age=${maxAge}, stale-while-revalidate=30`)
@@ -80,16 +81,19 @@ export async function POST(request: Request) {
 
     await ensureDatabaseInitialized()
     const body = await request.json()
-    const { nombre, empresa, email, telefono, producto, marca, volumen, envasado, mensaje, inversionEstimada } = body
 
-    if (!nombre || !email || !telefono || !empresa || !producto || !marca || !volumen || !envasado) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    // Validate with Zod
+    const validationResult = leadSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json({ error: 'Datos inválidos', details: validationResult.error.flatten() }, { status: 400 })
     }
+
+    const { nombre, empresa, email, telefono, producto, marca, volumen, envasado, mensaje, inversionEstimada, source } = validationResult.data
 
     const newLead = await createLead({
       nombre, empresa, email, telefono, producto, marca, volumen, envasado,
       mensaje, inversionEstimada, stage: 'entrante', notes: [],
-      source: body.source || 'web',
+      source: source || 'crm',
     })
 
     // Registrar actividad de creación

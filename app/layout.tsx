@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
+import { QueryProvider } from "@/components/providers/query-provider"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -142,8 +143,10 @@ export default function RootLayout({
               gtag('config', 'AW-10808684256');
             `}
           </Script>
-          {children}
-          <Toaster />
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
         </body>
       </html>
     </>
