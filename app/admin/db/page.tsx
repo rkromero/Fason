@@ -40,7 +40,7 @@ export default function DatabaseAdminPage() {
   const initDatabase = async () => {
     setInitializing(true)
     try {
-      const response = await fetch('/api/db/init')
+      const response = await fetch('/api/db/init', { method: 'POST' })
       const data = await response.json()
 
       if (data.success) {

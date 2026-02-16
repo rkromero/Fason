@@ -1,7 +1,18 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fason-crm-secret-key-change-in-production-2024')
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET es obligatorio en producción. Configurá la variable de entorno.')
+    }
+    console.warn('ADVERTENCIA: JWT_SECRET no configurado. Usando secret de desarrollo (NO usar en producción).')
+    return new TextEncoder().encode('dev-only-insecure-secret-do-not-use-in-prod')
+  }
+  return new TextEncoder().encode(secret)
+}
+const JWT_SECRET = getJwtSecret()
 const COOKIE_NAME = 'fason-session'
 const SESSION_DURATION = 60 * 60 * 24 * 7 // 7 days in seconds
 

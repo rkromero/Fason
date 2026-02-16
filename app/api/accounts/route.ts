@@ -27,8 +27,14 @@ export async function GET(request: Request) {
   }
 }
 
+// POST - Crear cuenta (admin y vendedor)
 export async function POST(request: Request) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol === 'viewer') {
+      return NextResponse.json({ error: 'No tenés permisos para crear cuentas' }, { status: 403 })
+    }
+
     await ensureDatabaseInitialized()
     const body = await request.json()
     const { nombre, empresa, cuit, email, telefono, website, industria, notas, ownerId } = body

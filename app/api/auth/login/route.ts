@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import pool from '@/lib/db'
 import { createSession, setSessionCookie } from '@/lib/auth'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit'
 
 const ADMIN_EMAIL = 'rodolfor86@gmail.com'
 const ADMIN_DEFAULT_PW = 'Mon$$123'
@@ -45,6 +46,13 @@ async function ensureAdminPassword() {
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting: máximo 5 intentos por IP cada 15 minutos
+    const ip = getClientIp(request)
+    const rl = checkRateLimit(`login:${ip}`, { windowMs: 15 * 60 * 1000, maxRequests: 5 })
+    if (!rl.allowed) {
+      return rateLimitResponse(rl.retryAfterMs)
+    }
+
     await ensureDatabaseInitialized()
     await ensureAdminPassword()
 

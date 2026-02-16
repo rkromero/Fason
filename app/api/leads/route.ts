@@ -48,9 +48,14 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Crear un nuevo lead
+// POST - Crear un nuevo lead (admin y vendedor)
 export async function POST(request: Request) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol === 'viewer') {
+      return NextResponse.json({ error: 'No tenés permisos para crear leads' }, { status: 403 })
+    }
+
     await ensureDatabaseInitialized()
     const body = await request.json()
     const { nombre, empresa, email, telefono, producto, marca, volumen, envasado, mensaje, inversionEstimada } = body

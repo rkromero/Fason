@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAllUsers, createUser } from '@/lib/db/user-queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
+// GET - Listar usuarios (cualquier usuario autenticado puede ver)
 export async function GET() {
   try {
     await ensureDatabaseInitialized()
@@ -15,11 +16,18 @@ export async function GET() {
   }
 }
 
+// POST - Crear usuario (solo admin)
 export async function POST(request: Request) {
   try {
+    // RBAC: solo admin puede crear usuarios
+    const rol = request.headers.get('x-user-rol')
+    if (rol !== 'admin') {
+      return NextResponse.json({ error: 'Solo administradores pueden crear usuarios' }, { status: 403 })
+    }
+
     await ensureDatabaseInitialized()
     const body = await request.json()
-    const { nombre, email, telefono, rol, password } = body
+    const { nombre, email, telefono, rol: userRol, password } = body
 
     if (!nombre || !email || !password) {
       return NextResponse.json({ error: 'Nombre, email y contraseña son requeridos' }, { status: 400 })
@@ -29,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
     }
 
-    const user = await createUser({ nombre, email, telefono, rol: rol || 'vendedor', password })
+    const user = await createUser({ nombre, email, telefono, rol: userRol || 'vendedor', password })
     return NextResponse.json({ user }, { status: 201 })
   } catch (error: any) {
     console.error('Error al crear usuario:', error)

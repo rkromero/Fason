@@ -3,11 +3,17 @@ import { getLeadById } from '@/lib/db/queries'
 import { convertLeadTransaction } from '@/lib/db/account-queries'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
+// POST - Convertir lead (admin y vendedor)
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol === 'viewer') {
+      return NextResponse.json({ error: 'No tenés permisos para convertir leads' }, { status: 403 })
+    }
+
     await ensureDatabaseInitialized()
     const { id } = params
     const body = await request.json()

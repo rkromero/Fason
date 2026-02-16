@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server'
 import { LeadStage } from '@/lib/types/lead'
 import { getLeadById, updateLead, deleteLead } from '@/lib/db/queries'
 
-// PUT - Actualizar un lead
+// PUT - Actualizar un lead (admin y vendedor)
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol === 'viewer') {
+      return NextResponse.json({ error: 'No tenés permisos para editar leads' }, { status: 403 })
+    }
+
     const { id } = params
     const body = await request.json()
 
@@ -48,12 +53,17 @@ export async function PUT(
   }
 }
 
-// DELETE - Eliminar un lead
+// DELETE - Eliminar un lead (solo admin)
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol !== 'admin') {
+      return NextResponse.json({ error: 'Solo administradores pueden eliminar leads' }, { status: 403 })
+    }
+
     const { id } = params
 
     // Verificar que el lead existe

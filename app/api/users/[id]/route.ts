@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
 import { getUserById, updateUser, deleteUser } from '@/lib/db/user-queries'
 
+// PUT - Actualizar usuario (solo admin)
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol !== 'admin') {
+      return NextResponse.json({ error: 'Solo administradores pueden editar usuarios' }, { status: 403 })
+    }
+
     const { id } = params
     const body = await request.json()
 
@@ -33,12 +39,24 @@ export async function PUT(
   }
 }
 
+// DELETE - Eliminar usuario (solo admin)
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const rol = request.headers.get('x-user-rol')
+    if (rol !== 'admin') {
+      return NextResponse.json({ error: 'Solo administradores pueden eliminar usuarios' }, { status: 403 })
+    }
+
     const { id } = params
+    const userId = request.headers.get('x-user-id')
+
+    // No permitir eliminarse a sí mismo
+    if (userId === id) {
+      return NextResponse.json({ error: 'No podés eliminarte a vos mismo' }, { status: 400 })
+    }
 
     const existing = await getUserById(id)
     if (!existing) {
