@@ -27,11 +27,19 @@ function mapAccount(row: any): Account {
   }
 }
 
-export async function getAllAccounts(): Promise<Account[]> {
-  const result = await pool.query(
-    `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id ORDER BY a.created_at DESC`
-  )
-  return result.rows.map(mapAccount)
+export async function getAllAccounts(page = 1, limit = 100): Promise<{ accounts: Account[]; total: number }> {
+  const offset = (page - 1) * limit
+  const [countRes, dataRes] = await Promise.all([
+    pool.query(`SELECT COUNT(*) as total FROM accounts`),
+    pool.query(
+      `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id ORDER BY a.created_at DESC LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    ),
+  ])
+  return {
+    accounts: dataRes.rows.map(mapAccount),
+    total: parseInt(countRes.rows[0].total, 10),
+  }
 }
 
 export async function getAccountById(id: string): Promise<Account | null> {
@@ -63,97 +71,68 @@ export async function createAccount(data: {
     [id, data.nombre, data.empresa, data.cuit || null, data.email || null, data.telefono || null,
      data.website || null, data.industria || null, data.notas || null, data.ownerId || null, now]
   )
-  const account = await getAccountById(id)
-  return account!
+  return {
+    id, nombre: data.nombre, empresa: data.empresa, cuit: data.cuit,
+    email: data.email || '', telefono: data.telefono || '',
+    website: data.website, industria: data.industria, notas: data.notas,
+    ownerId: data.ownerId, createdAt: now, updatedAt: now,
+  }
 }
 
-// ─── Duplicate detection (fuzzy) ─────────────────────────────────
-
-function normalizeStr(s: string): string {
-  return s.toLowerCase().trim().replace(/\s+/g, ' ')
-}
-
-function normalizeCuit(s: string): string {
-  return s.replace(/[-.\s]/g, '')
-}
+// ─── Duplicate detection (optimized: single UNION ALL query) ─────
 
 export async function findDuplicateAccounts(data: {
   cuit?: string; email?: string; telefono?: string; empresa?: string; nombre?: string
 }): Promise<DuplicateMatch[]> {
-  const matches: DuplicateMatch[] = []
-  const seenIds = new Set<string>()
+  const unions: string[] = []
+  const params: any[] = []
+  let idx = 1
 
-  // Exact CUIT match (highest confidence)
   if (data.cuit && data.cuit.trim()) {
-    const normalized = normalizeCuit(data.cuit)
-    const result = await pool.query(
-      `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id
-       WHERE REPLACE(REPLACE(REPLACE(a.cuit, '-', ''), '.', ''), ' ', '') = $1`,
-      [normalized]
-    )
-    for (const row of result.rows) {
-      const acc = mapAccount(row)
-      if (!seenIds.has(acc.id)) {
-        seenIds.add(acc.id)
-        matches.push({ account: acc, matchType: 'cuit', confidence: 'high' })
-      }
-    }
+    const normalized = data.cuit.replace(/[-.\s]/g, '')
+    unions.push(`SELECT ${ACCOUNT_SELECT}, 'cuit' as match_type, 'high' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE REPLACE(REPLACE(REPLACE(a.cuit, '-', ''), '.', ''), ' ', '') = $${idx}`)
+    params.push(normalized)
+    idx++
   }
 
-  // Exact email match
   if (data.email && data.email.trim()) {
-    const result = await pool.query(
-      `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id
-       WHERE LOWER(a.email) = LOWER($1)`,
-      [data.email.trim()]
-    )
-    for (const row of result.rows) {
-      const acc = mapAccount(row)
-      if (!seenIds.has(acc.id)) {
-        seenIds.add(acc.id)
-        matches.push({ account: acc, matchType: 'email', confidence: 'high' })
-      }
-    }
+    unions.push(`SELECT ${ACCOUNT_SELECT}, 'email' as match_type, 'high' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE LOWER(a.email) = LOWER($${idx})`)
+    params.push(data.email.trim())
+    idx++
   }
 
-  // Exact phone match (strip non-digits)
   if (data.telefono && data.telefono.trim()) {
     const digits = data.telefono.replace(/\D/g, '')
     if (digits.length >= 6) {
-      const result = await pool.query(
-        `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id
-         WHERE REGEXP_REPLACE(a.telefono, '[^0-9]', '', 'g') LIKE '%' || $1 || '%'
-         OR REGEXP_REPLACE(a.telefono, '[^0-9]', '', 'g') = $1`,
-        [digits]
-      )
-      for (const row of result.rows) {
-        const acc = mapAccount(row)
-        if (!seenIds.has(acc.id)) {
-          seenIds.add(acc.id)
-          matches.push({ account: acc, matchType: 'telefono', confidence: 'high' })
-        }
-      }
+      unions.push(`SELECT ${ACCOUNT_SELECT}, 'telefono' as match_type, 'high' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE REGEXP_REPLACE(a.telefono, '[^0-9]', '', 'g') LIKE '%' || $${idx} || '%'`)
+      params.push(digits)
+      idx++
     }
   }
 
-  // Fuzzy name match (ILIKE with partial)
   if (data.empresa && data.empresa.trim().length >= 3) {
-    const normalized = normalizeStr(data.empresa)
-    const result = await pool.query(
-      `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id
-       WHERE LOWER(a.empresa) ILIKE $1 OR LOWER(a.nombre) ILIKE $1
-       ORDER BY a.empresa ASC LIMIT 5`,
-      [`%${normalized}%`]
-    )
-    for (const row of result.rows) {
-      const acc = mapAccount(row)
-      if (!seenIds.has(acc.id)) {
-        seenIds.add(acc.id)
-        matches.push({ account: acc, matchType: 'nombre', confidence: 'medium' })
-      }
-    }
+    const normalized = `%${data.empresa.toLowerCase().trim()}%`
+    unions.push(`SELECT ${ACCOUNT_SELECT}, 'nombre' as match_type, 'medium' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE LOWER(a.empresa) LIKE $${idx} OR LOWER(a.nombre) LIKE $${idx} LIMIT 5`)
+    params.push(normalized)
+    idx++
   }
 
+  if (unions.length === 0) return []
+
+  const result = await pool.query(unions.join(' UNION ALL '), params)
+
+  const seenIds = new Set<string>()
+  const matches: DuplicateMatch[] = []
+  for (const row of result.rows) {
+    if (!seenIds.has(row.id)) {
+      seenIds.add(row.id)
+      matches.push({
+        account: mapAccount(row),
+        matchType: row.match_type,
+        confidence: row.confidence,
+      })
+    }
+  }
   return matches
 }
 

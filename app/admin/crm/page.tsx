@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Lead } from '@/lib/types/lead'
 import { User } from '@/lib/types/user'
@@ -30,29 +30,12 @@ function enrichLead(lead: Lead): Lead {
   }
 }
 
-// ─── Filter logic ───────────────────────────────────────────────
-function applyFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
+// ─── Client-side filters (for fields NOT in DB) ─────────────────
+function applyClientFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
   let result = leads
-
-  if (filters.search.trim()) {
-    const q = filters.search.toLowerCase()
-    result = result.filter((l) =>
-      l.nombre.toLowerCase().includes(q) ||
-      l.empresa.toLowerCase().includes(q) ||
-      l.email.toLowerCase().includes(q) ||
-      l.telefono.toLowerCase().includes(q) ||
-      (l.tags ?? []).some((t) => t.toLowerCase().includes(q))
-    )
-  }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
 
   for (const qf of filters.quickFilters) {
     switch (qf) {
-      case 'hoy':
-        result = result.filter((l) => { const d = new Date(l.createdAt); d.setHours(0, 0, 0, 0); return d.getTime() === today.getTime() })
-        break
       case 'vencidos':
         result = result.filter((l) => l.nextTaskDate && new Date(l.nextTaskDate) < new Date())
         break
@@ -66,25 +49,6 @@ function applyFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
   }
 
   if (filters.source !== 'all') result = result.filter((l) => l.source === filters.source)
-  if (filters.producto !== 'all') result = result.filter((l) => l.producto === filters.producto)
-  if (filters.owner !== 'all') result = result.filter((l) => l.ownerId === filters.owner)
-
-  result = [...result].sort((a, b) => {
-    switch (filters.sortOrder) {
-      case 'ultima-actividad':
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      case 'proxima-tarea': {
-        const aD = a.nextTaskDate ? new Date(a.nextTaskDate).getTime() : Infinity
-        const bD = b.nextTaskDate ? new Date(b.nextTaskDate).getTime() : Infinity
-        return aD - bD
-      }
-      case 'mayor-monto': {
-        const parse = (s?: string) => s ? Number(s.replace(/[^0-9.]/g, '')) || 0 : 0
-        return parse(b.inversionEstimada) - parse(a.inversionEstimada)
-      }
-      default: return 0
-    }
-  })
 
   return result
 }
@@ -99,10 +63,36 @@ function countActiveFilters(filters: KanbanFilters): number {
   return count
 }
 
+// ─── Build API query string from filters ────────────────────────
+function buildLeadsQuery(filters: KanbanFilters): string {
+  const params = new URLSearchParams()
+
+  if (filters.search.trim()) params.set('search', filters.search.trim())
+  if (filters.producto !== 'all') params.set('producto', filters.producto)
+  if (filters.owner !== 'all') params.set('owner', filters.owner)
+  if (filters.quickFilters.includes('hoy')) params.set('createdToday', 'true')
+
+  switch (filters.sortOrder) {
+    case 'ultima-actividad':
+      params.set('sortBy', 'updated')
+      params.set('sortDir', 'desc')
+      break
+    case 'mayor-monto':
+      params.set('sortBy', 'monto')
+      params.set('sortDir', 'desc')
+      break
+  }
+
+  params.set('limit', '500')
+  const qs = params.toString()
+  return qs ? `/api/leads?${qs}` : '/api/leads'
+}
+
 // ─── Page ───────────────────────────────────────────────────────
 export default function CRMPage() {
   const router = useRouter()
   const [rawLeads, setRawLeads] = useState<Lead[]>([])
+  const [totalLeads, setTotalLeads] = useState(0)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -113,22 +103,38 @@ export default function CRMPage() {
   const [showConverted, setShowConverted] = useState(false)
   const [convertedLeads, setConvertedLeads] = useState<Lead[]>([])
 
+  // Debounce ref for search
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const lastFiltersRef = useRef<string>('')
+
   const leads = useMemo(() => rawLeads.map(enrichLead), [rawLeads])
-  const filteredLeads = useMemo(() => applyFilters(leads, filters), [leads, filters])
+
+  // Client-side filters for fields not in DB (source, vencidos, sin-tarea, alta-prioridad)
+  const filteredLeads = useMemo(() => applyClientFilters(leads, filters), [leads, filters])
+
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters])
   const hasActiveFilters = activeFilterCount > 0
 
-  const fetchLeads = useCallback(async () => {
+  // Fetch leads with server-side filters
+  const fetchLeads = useCallback(async (currentFilters?: KanbanFilters) => {
+    const f = currentFilters || filters
+    const url = buildLeadsQuery(f)
+
+    // Avoid duplicate fetches for same params
+    if (lastFiltersRef.current === url && rawLeads.length > 0) return
+    lastFiltersRef.current = url
+
     setError(null)
     setLoading(true)
     try {
       const [leadsRes, usersRes] = await Promise.all([
-        fetch('/api/leads'),
+        fetch(url),
         fetch('/api/users'),
       ])
       if (leadsRes.ok) {
         const data = await leadsRes.json()
-        setRawLeads(data.leads)
+        setRawLeads(data.leads || [])
+        setTotalLeads(data.total || data.leads?.length || 0)
       } else {
         setError('No se pudieron cargar los leads. Intentá de nuevo.')
         toast.error('Error al cargar los leads')
@@ -144,12 +150,29 @@ export default function CRMPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters, rawLeads.length])
 
-  useEffect(() => { fetchLeads() }, [fetchLeads])
+  // Initial load
+  useEffect(() => { fetchLeads() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch when server-side filters change (debounced for search)
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+
+    searchTimerRef.current = setTimeout(() => {
+      lastFiltersRef.current = '' // Force re-fetch
+      fetchLeads(filters)
+    }, filters.search ? 350 : 0) // 350ms debounce for search, instant for other filters
+
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
+  }, [filters.search, filters.producto, filters.owner, filters.sortOrder, filters.quickFilters]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRefresh = () => {
+    lastFiltersRef.current = ''
+    fetchLeads(filters)
+  }
 
   const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
-    // Intercept: if moving to "ganado", open conversion modal
     if (updates.stage === 'ganado') {
       const lead = rawLeads.find((l) => l.id === leadId)
       if (lead && lead.stage !== 'ganado') {
@@ -187,14 +210,12 @@ export default function CRMPage() {
 
   const fetchConvertedLeads = async () => {
     try {
-      const res = await fetch('/api/leads?converted=true')
+      const res = await fetch('/api/leads?converted=true&limit=100')
       if (res.ok) {
         const data = await res.json()
         setConvertedLeads(data.leads || [])
       }
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }
 
   const toggleShowConverted = () => {
@@ -218,7 +239,7 @@ export default function CRMPage() {
     }
   }
 
-  const handleQuickAdd = (stageId: string) => {
+  const handleQuickAdd = () => {
     setIsNewLeadDialogOpen(true)
   }
 
@@ -237,10 +258,10 @@ export default function CRMPage() {
                 <p className="crm-meta crm-mono mt-0.5 text-[10px] sm:text-[11px]">
                   {loading ? (
                     <span className="crm-skeleton inline-block w-16 h-3" />
-                  ) : filteredLeads.length === leads.length ? (
-                    `${leads.length} leads`
+                  ) : filteredLeads.length === totalLeads ? (
+                    `${totalLeads} leads`
                   ) : (
-                    <>Mostrando {filteredLeads.length} de {leads.length}</>
+                    <>Mostrando {filteredLeads.length} de {totalLeads}</>
                   )}
                 </p>
               </div>
@@ -289,7 +310,7 @@ export default function CRMPage() {
                 </div>
 
                 <Button
-                  onClick={fetchLeads}
+                  onClick={handleRefresh}
                   variant="ghost"
                   size="sm"
                   disabled={loading}
@@ -331,7 +352,7 @@ export default function CRMPage() {
                 <p className="crm-subtitle font-semibold text-[var(--crm-text)]">Error al cargar datos</p>
                 <p className="crm-body mt-1">{error}</p>
               </div>
-              <Button onClick={fetchLeads} className="crm-btn-secondary gap-2 mt-2">
+              <Button onClick={handleRefresh} className="crm-btn-secondary gap-2 mt-2">
                 <RefreshCw className="h-3.5 w-3.5" />
                 Reintentar
               </Button>
@@ -339,7 +360,7 @@ export default function CRMPage() {
           )}
 
           {/* Empty state (no leads at all) */}
-          {!loading && !error && leads.length === 0 && (
+          {!loading && !error && totalLeads === 0 && !showConverted && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)]">
                 <Inbox className="h-6 w-6 text-[var(--crm-text-muted)]" />
@@ -379,11 +400,9 @@ export default function CRMPage() {
                           <p className="text-[13px] font-semibold text-[var(--crm-text)] truncate">{lead.nombre}</p>
                           <p className="text-[12px] text-[var(--crm-text-secondary)]">{lead.empresa}</p>
                         </div>
-                        <div className="shrink-0 flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                            Convertido
-                          </span>
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
+                          Convertido
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-[var(--crm-text-muted)]">
                         <span>{lead.email}</span>
@@ -400,7 +419,7 @@ export default function CRMPage() {
           )}
 
           {/* Normal content */}
-          {!error && leads.length > 0 && !showConverted && (
+          {!error && (totalLeads > 0 || hasActiveFilters) && !showConverted && (
             <>
               <KanbanTopBar
                 filters={filters}
@@ -445,7 +464,6 @@ export default function CRMPage() {
           {/* Loading skeleton */}
           {loading && (
             <div className="mt-3 sm:mt-4">
-              {/* Mobile skeleton */}
               <div className="md:hidden space-y-2">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] p-3 space-y-2">
@@ -462,7 +480,6 @@ export default function CRMPage() {
                   </div>
                 ))}
               </div>
-              {/* Desktop skeleton */}
               <div className="hidden md:grid md:grid-cols-6 gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="rounded-[var(--crm-radius-lg)] border border-[var(--crm-border)] bg-[var(--crm-bg-card)] p-3 space-y-3">
@@ -491,7 +508,7 @@ export default function CRMPage() {
         <NewLeadDialog
           open={isNewLeadDialogOpen}
           onOpenChange={setIsNewLeadDialogOpen}
-          onLeadCreated={fetchLeads}
+          onLeadCreated={() => { lastFiltersRef.current = ''; fetchLeads(filters) }}
         />
 
         <ConvertLeadModal

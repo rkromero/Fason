@@ -91,6 +91,11 @@ export async function initDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_empresa ON leads(empresa)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_owner_id ON leads(owner_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_status_created ON leads(status, created_at DESC)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_status_converted ON leads(status, converted_at DESC)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_producto ON leads(producto)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_leads_account_id ON leads(account_id)`)
     console.log('Tabla leads verificada')
 
     // ─── Tabla accounts ─────────────────────────────────────
@@ -110,6 +115,9 @@ export async function initDatabase() {
       )
     `)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_empresa ON accounts(empresa)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_owner_id ON accounts(owner_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON accounts(created_at DESC)`)
     console.log('Tabla accounts verificada')
 
     // ─── Tabla contacts ──────────────────────────────────────
@@ -161,6 +169,9 @@ export async function initDatabase() {
     `)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_account_id ON deals(account_id)`)
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_status ON deals(status)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_owner_id ON deals(owner_id)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_created_at ON deals(created_at DESC)`)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deals_origin_lead ON deals(origin_lead_id)`)
     console.log('Tabla deals verificada')
 
     // ─── Migración leads: columnas de conversión ─────────────

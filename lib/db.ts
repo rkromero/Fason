@@ -1,17 +1,17 @@
 import { Pool } from 'pg'
 
-// Configuración de la conexión a PostgreSQL
-// Railway proporciona DATABASE_URL como variable de entorno
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 20,
+  min: 2,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  statement_timeout: 10000,
 })
 
-// Manejar errores de conexión
 pool.on('error', (err) => {
   console.error('Error inesperado en el cliente de PostgreSQL:', err)
-  process.exit(-1)
 })
 
 export default pool
-

@@ -8,8 +8,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')
 
-    const accounts = q ? await searchAccounts(q) : await getAllAccounts()
-    return NextResponse.json({ accounts }, { status: 200 })
+    if (q) {
+      const accounts = await searchAccounts(q)
+      return NextResponse.json({ accounts }, { status: 200 })
+    }
+
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '100', 10)
+    const result = await getAllAccounts(page, limit)
+    return NextResponse.json(result, { status: 200 })
   } catch (error) {
     console.error('Error al obtener cuentas:', error)
     return NextResponse.json({ error: 'Error al obtener cuentas' }, { status: 500 })

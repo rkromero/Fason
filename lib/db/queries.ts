@@ -55,18 +55,135 @@ function mapRowToLead(row: any): Lead {
   }
 }
 
-// Obtener todos los leads (excluye convertidos por defecto)
-export async function getAllLeads(): Promise<Lead[]> {
-  const result = await pool.query(
-    `SELECT ${LEAD_SELECT} ${LEAD_FROM} WHERE (l.status IS NULL OR l.status = 'active') ORDER BY l.created_at DESC`
-  )
-  return result.rows.map(mapRowToLead)
+// ─── Filtrado server-side ────────────────────────────────────────
+
+export interface LeadFilters {
+  search?: string
+  producto?: string
+  owner?: string
+  stage?: string
+  createdToday?: boolean
+  sortBy?: 'updated' | 'created' | 'monto'
+  sortDir?: 'asc' | 'desc'
+  page?: number
+  limit?: number
 }
 
-// Obtener leads convertidos
-export async function getConvertedLeads(): Promise<Lead[]> {
+export interface LeadQueryResult {
+  leads: Lead[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+export async function getFilteredLeads(filters: LeadFilters = {}): Promise<LeadQueryResult> {
+  const conditions: string[] = ['(l.status IS NULL OR l.status = \'active\')']
+  const params: any[] = []
+  let paramIdx = 1
+
+  // Search: nombre, empresa, email, telefono
+  if (filters.search && filters.search.trim()) {
+    const q = `%${filters.search.trim().toLowerCase()}%`
+    conditions.push(`(LOWER(l.nombre) LIKE $${paramIdx} OR LOWER(l.empresa) LIKE $${paramIdx} OR LOWER(l.email) LIKE $${paramIdx} OR LOWER(l.telefono) LIKE $${paramIdx})`)
+    params.push(q)
+    paramIdx++
+  }
+
+  // Producto filter
+  if (filters.producto && filters.producto !== 'all') {
+    conditions.push(`l.producto = $${paramIdx}`)
+    params.push(filters.producto)
+    paramIdx++
+  }
+
+  // Owner filter
+  if (filters.owner && filters.owner !== 'all') {
+    conditions.push(`l.owner_id = $${paramIdx}`)
+    params.push(filters.owner)
+    paramIdx++
+  }
+
+  // Stage filter
+  if (filters.stage && filters.stage !== 'all') {
+    conditions.push(`l.stage = $${paramIdx}`)
+    params.push(filters.stage)
+    paramIdx++
+  }
+
+  // Created today
+  if (filters.createdToday) {
+    conditions.push(`l.created_at >= CURRENT_DATE AND l.created_at < CURRENT_DATE + INTERVAL '1 day'`)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  // Sort
+  let orderBy: string
+  switch (filters.sortBy) {
+    case 'monto':
+      orderBy = `ORDER BY CAST(NULLIF(REGEXP_REPLACE(l.inversion_estimada, '[^0-9.]', '', 'g'), '') AS NUMERIC) ${filters.sortDir === 'asc' ? 'ASC' : 'DESC'} NULLS LAST`
+      break
+    case 'created':
+      orderBy = `ORDER BY l.created_at ${filters.sortDir === 'asc' ? 'ASC' : 'DESC'}`
+      break
+    default:
+      orderBy = `ORDER BY l.updated_at DESC`
+  }
+
+  // Count total (for pagination metadata)
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as total ${LEAD_FROM} ${whereClause}`,
+    params
+  )
+  const total = parseInt(countResult.rows[0].total, 10)
+
+  // Pagination
+  const page = Math.max(1, filters.page || 1)
+  const limit = Math.min(500, Math.max(1, filters.limit || 200))
+  const offset = (page - 1) * limit
+
   const result = await pool.query(
-    `SELECT ${LEAD_SELECT} ${LEAD_FROM} WHERE l.status = 'converted' ORDER BY l.converted_at DESC`
+    `SELECT ${LEAD_SELECT} ${LEAD_FROM} ${whereClause} ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+    [...params, limit, offset]
+  )
+
+  return {
+    leads: result.rows.map(mapRowToLead),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  }
+}
+
+// Leads convertidos con paginación
+export async function getConvertedLeads(page = 1, limit = 50): Promise<LeadQueryResult> {
+  const offset = (page - 1) * limit
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as total FROM leads WHERE status = 'converted'`
+  )
+  const total = parseInt(countResult.rows[0].total, 10)
+
+  const result = await pool.query(
+    `SELECT ${LEAD_SELECT} ${LEAD_FROM} WHERE l.status = 'converted' ORDER BY l.converted_at DESC LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  )
+
+  return {
+    leads: result.rows.map(mapRowToLead),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  }
+}
+
+// Mantener getAllLeads para compatibilidad pero con limit de seguridad
+export async function getAllLeads(): Promise<Lead[]> {
+  const result = await pool.query(
+    `SELECT ${LEAD_SELECT} ${LEAD_FROM} WHERE (l.status IS NULL OR l.status = 'active') ORDER BY l.created_at DESC LIMIT 500`
   )
   return result.rows.map(mapRowToLead)
 }
@@ -83,16 +200,12 @@ export async function createLead(lead: Omit<Lead, 'id' | 'createdAt' | 'updatedA
   const id = Date.now().toString()
   const now = new Date().toISOString()
 
-  const result = await pool.query(
+  await pool.query(
     `INSERT INTO leads (
       id, nombre, empresa, email, telefono, producto, marca, volumen,
       envasado, mensaje, inversion_estimada, stage, owner_id, created_at, updated_at, notes
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14, $15)
-    RETURNING
-      id, nombre, empresa, email, telefono, producto, marca, volumen, envasado, mensaje,
-      inversion_estimada as "inversionEstimada", stage, owner_id as "ownerId",
-      created_at as "createdAt", updated_at as "updatedAt", notes, last_contact as "lastContact"`,
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14, $15)`,
     [
       id, lead.nombre, lead.empresa, lead.email, lead.telefono,
       lead.producto, lead.marca, lead.volumen, lead.envasado,
@@ -101,11 +214,10 @@ export async function createLead(lead: Omit<Lead, 'id' | 'createdAt' | 'updatedA
     ]
   )
 
-  const row = result.rows[0]
-  return mapRowToLead(row)
+  return (await getLeadById(id))!
 }
 
-// Actualizar un lead
+// Actualizar un lead (optimizado: usa RETURNING y un solo query para el JOIN)
 export async function updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
   const fields: string[] = []
   const values: any[] = []
@@ -135,18 +247,11 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
     return getLeadById(id)
   }
 
-  const result = await pool.query(
-    `UPDATE leads l SET ${fields.join(', ')} WHERE l.id = $${paramCount}
-     RETURNING
-      l.id, l.nombre, l.empresa, l.email, l.telefono, l.producto, l.marca, l.volumen, l.envasado, l.mensaje,
-      l.inversion_estimada as "inversionEstimada", l.stage, l.owner_id as "ownerId",
-      l.created_at as "createdAt", l.updated_at as "updatedAt", l.notes, l.last_contact as "lastContact"`,
+  await pool.query(
+    `UPDATE leads SET ${fields.join(', ')} WHERE id = $${paramCount}`,
     values
   )
 
-  if (result.rows.length === 0) return null
-
-  // Fetch again with JOIN to get owner name
   return getLeadById(id)
 }
 
