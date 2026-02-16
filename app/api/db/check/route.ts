@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
 
 // GET - Verificar estado de DB (protegido por middleware, admin-only)
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const connectionTest = await pool.query('SELECT NOW()')
