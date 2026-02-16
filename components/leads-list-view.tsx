@@ -7,6 +7,7 @@ import { LeadDrawer } from './lead-drawer'
 import {
   AlertCircle, CalendarCheck, Mail, MessageCircle, Phone,
   ArrowUpDown, ArrowUp, ArrowDown, ChevronRight,
+  ChevronLeft, ChevronsLeft, ChevronsRight,
 } from 'lucide-react'
 import {
   Tooltip, TooltipContent, TooltipTrigger,
@@ -20,6 +21,8 @@ interface LeadsListViewProps {
 
 type SortKey = 'nombre' | 'empresa' | 'stage' | 'owner' | 'monto' | 'nextTask' | 'updatedAt'
 type SortDir = 'asc' | 'desc'
+
+const PAGE_SIZE = 25
 
 function getOwnerInitial(o?: string) { return o ? o.charAt(0).toUpperCase() : '?' }
 const OC = ['bg-blue-600', 'bg-violet-600', 'bg-teal-600', 'bg-pink-600', 'bg-indigo-600', 'bg-orange-500', 'bg-emerald-600', 'bg-rose-500']
@@ -43,6 +46,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [page, setPage] = useState(1)
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -51,6 +55,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
       setSortKey(key)
       setSortDir('asc')
     }
+    setPage(1)
   }
 
   const sorted = useMemo(() => [...leads].sort((a, b) => {
@@ -75,6 +80,12 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
     }
   }), [leads, sortKey, sortDir])
 
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const paginatedLeads = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const goTo = (p: number) => setPage(Math.max(1, Math.min(totalPages, p)))
+
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 text-[var(--crm-text-placeholder)]" />
     return sortDir === 'asc'
@@ -91,12 +102,71 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
     window.open(`https://wa.me/${p}`, '_blank')
   }
 
+  // ─── Pagination bar ─────────────────────────────────────
+  const PaginationBar = () => {
+    if (sorted.length <= PAGE_SIZE) return null
+    const from = (safePage - 1) * PAGE_SIZE + 1
+    const to = Math.min(safePage * PAGE_SIZE, sorted.length)
+
+    return (
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-[var(--crm-border-light)] bg-[var(--crm-bg-subtle)]" role="navigation" aria-label="Paginación">
+        <span className="text-[11px] text-[var(--crm-text-muted)] crm-mono">
+          {from}–{to} de {sorted.length}
+        </span>
+        <div className="flex items-center gap-1">
+          <button onClick={() => goTo(1)} disabled={safePage === 1} aria-label="Primera página" className="h-7 w-7 flex items-center justify-center rounded-md text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={() => goTo(safePage - 1)} disabled={safePage === 1} aria-label="Página anterior" className="h-7 w-7 flex items-center justify-center rounded-md text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Page numbers */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+            .reduce<(number | 'dot')[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('dot')
+              acc.push(p)
+              return acc
+            }, [])
+            .map((item, i) =>
+              item === 'dot' ? (
+                <span key={`d${i}`} className="text-[11px] text-[var(--crm-text-muted)] px-0.5">…</span>
+              ) : (
+                <button
+                  key={item}
+                  onClick={() => goTo(item as number)}
+                  aria-label={`Página ${item}`}
+                  aria-current={safePage === item ? 'page' : undefined}
+                  className={cn(
+                    'h-7 min-w-[28px] px-1 flex items-center justify-center rounded-md text-[12px] font-medium transition-colors crm-mono',
+                    safePage === item
+                      ? 'bg-[var(--crm-text)] text-white'
+                      : 'text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)]'
+                  )}
+                >
+                  {item}
+                </button>
+              )
+            )}
+
+          <button onClick={() => goTo(safePage + 1)} disabled={safePage === totalPages} aria-label="Página siguiente" className="h-7 w-7 flex items-center justify-center rounded-md text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={() => goTo(totalPages)} disabled={safePage === totalPages} aria-label="Última página" className="h-7 w-7 flex items-center justify-center rounded-md text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors">
+            <ChevronsRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       {/* ─── Desktop table ─── */}
       <div className="hidden md:block crm-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left" aria-label="Listado de leads">
             <thead>
               <tr className="border-b border-[var(--crm-border-light)] bg-[var(--crm-bg-subtle)]">
                 {([
@@ -116,6 +186,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                       sortable && 'cursor-pointer hover:text-[var(--crm-text-secondary)] select-none'
                     )}
                     onClick={() => sortable && key && toggleSort(key)}
+                    aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
                   >
                     <span className="flex items-center gap-1">
                       {label}
@@ -126,7 +197,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
               </tr>
             </thead>
             <tbody>
-              {sorted.map((lead) => {
+              {paginatedLeads.map((lead) => {
                 const stageConfig = STAGES.find((s) => s.id === lead.stage)
                 const nextTask = getNextTask(lead)
                 const overdueCount = getOverdueTaskCount(lead)
@@ -202,7 +273,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                       <div className="flex items-center gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button onClick={(e) => handleWhatsApp(e, lead)} className="h-6 w-6 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-success)] hover:bg-[var(--crm-success-light)] transition-colors">
+                            <button onClick={(e) => handleWhatsApp(e, lead)} aria-label="WhatsApp" className="h-6 w-6 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-success)] hover:bg-[var(--crm-success-light)] transition-colors">
                               <MessageCircle className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
@@ -210,7 +281,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${lead.email}` }} className="h-6 w-6 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${lead.email}` }} aria-label="Email" className="h-6 w-6 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] transition-colors">
                               <Mail className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
@@ -218,7 +289,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }} className="h-6 w-6 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }} aria-label="Llamar" className="h-6 w-6 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] hover:bg-[var(--crm-bg-hover)] transition-colors">
                               <Phone className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
@@ -238,6 +309,8 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
             <p className="crm-body">Sin leads para mostrar</p>
           </div>
         )}
+
+        <PaginationBar />
       </div>
 
       {/* ─── Mobile card list ─── */}
@@ -247,7 +320,7 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
             <p className="crm-body">Sin leads para mostrar</p>
           </div>
         )}
-        {sorted.map((lead) => {
+        {paginatedLeads.map((lead) => {
           const stageConfig = STAGES.find((s) => s.id === lead.stage)
           const nextTask = getNextTask(lead)
           const overdueCount = getOverdueTaskCount(lead)
@@ -262,7 +335,6 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                 overdueCount > 0 && 'border-l-2 border-l-[var(--crm-danger)]'
               )}
             >
-              {/* Row 1: Name + Stage */}
               <div className="flex items-center gap-2 mb-1.5">
                 <span className={cn('h-2 w-2 rounded-full shrink-0', getPriorityDot(lead.priority))} />
                 <span className="text-[13px] font-medium text-[var(--crm-text)] flex-1 truncate">{lead.nombre}</span>
@@ -276,8 +348,6 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                   {stageConfig?.label}
                 </span>
               </div>
-
-              {/* Row 2: Company + Owner */}
               <div className="flex items-center gap-2 mb-1.5 pl-4">
                 <span className="text-[12px] text-[var(--crm-text-secondary)] flex-1 truncate">{lead.empresa}</span>
                 <div className="flex items-center gap-1 shrink-0">
@@ -287,8 +357,6 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                   <span className="text-[11px] text-[var(--crm-text-muted)] truncate max-w-[60px]">{lead.owner || 'N/A'}</span>
                 </div>
               </div>
-
-              {/* Row 3: Monto + Next Task + Actions */}
               <div className="flex items-center gap-2 pl-4">
                 {lead.inversionEstimada && (
                   <span className="text-[12px] font-medium text-[var(--crm-text)] crm-mono shrink-0">${lead.inversionEstimada}</span>
@@ -305,12 +373,11 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
                   </span>
                 )}
                 <div className="flex-1" />
-                {/* Mobile quick actions */}
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={(e) => handleWhatsApp(e, lead)} className="h-7 w-7 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-success)] active:bg-[var(--crm-success-light)] transition-colors">
+                  <button onClick={(e) => handleWhatsApp(e, lead)} aria-label="WhatsApp" className="h-7 w-7 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-success)] active:bg-[var(--crm-success-light)] transition-colors">
                     <MessageCircle className="h-4 w-4" />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }} className="h-7 w-7 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] active:bg-[var(--crm-bg-hover)] transition-colors">
+                  <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${lead.telefono}` }} aria-label="Llamar" className="h-7 w-7 flex items-center justify-center rounded-[var(--crm-radius-sm)] text-[var(--crm-text-muted)] active:bg-[var(--crm-bg-hover)] transition-colors">
                     <Phone className="h-4 w-4" />
                   </button>
                   <ChevronRight className="h-4 w-4 text-[var(--crm-text-muted)]" />
@@ -319,6 +386,23 @@ export const LeadsListView = memo(function LeadsListView({ leads, onUpdateLead, 
             </div>
           )
         })}
+
+        {/* Mobile pagination */}
+        {sorted.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-2 px-1 py-3" role="navigation" aria-label="Paginación">
+            <span className="text-[11px] text-[var(--crm-text-muted)] crm-mono">
+              Pág {safePage}/{totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => goTo(safePage - 1)} disabled={safePage === 1} aria-label="Anterior" className="h-8 px-3 flex items-center justify-center rounded-md text-[12px] font-medium bg-[var(--crm-bg-card)] border border-[var(--crm-border)] text-[var(--crm-text-muted)] disabled:opacity-30 disabled:pointer-events-none transition-colors active:bg-[var(--crm-bg-hover)]">
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Anterior
+              </button>
+              <button onClick={() => goTo(safePage + 1)} disabled={safePage === totalPages} aria-label="Siguiente" className="h-8 px-3 flex items-center justify-center rounded-md text-[12px] font-medium bg-[var(--crm-bg-card)] border border-[var(--crm-border)] text-[var(--crm-text-muted)] disabled:opacity-30 disabled:pointer-events-none transition-colors active:bg-[var(--crm-bg-hover)]">
+                Siguiente <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedLead && (

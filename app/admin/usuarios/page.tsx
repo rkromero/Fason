@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { User, UserRole, USER_ROLES } from '@/lib/types/user'
 import { CRMSidebar } from '@/components/crm-sidebar'
+import { SidebarContent } from '@/components/sidebar-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -175,7 +176,7 @@ export default function UsuariosPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pb-[72px] md:pb-0">
+      <SidebarContent>
         {/* Header */}
         <div className="crm-header sticky top-0 z-10 shrink-0">
           <div className="px-3 sm:px-6 py-2.5 sm:py-4">
@@ -373,7 +374,7 @@ export default function UsuariosPage() {
             </>
           )}
         </div>
-      </div>
+      </SidebarContent>
 
       {/* Create/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>

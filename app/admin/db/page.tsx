@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RefreshCw, Database, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CRMSidebar } from '@/components/crm-sidebar'
+import { SidebarContent } from '@/components/sidebar-layout'
 
 export default function DatabaseAdminPage() {
   const [status, setStatus] = useState<Record<string, unknown> | null>(null)
@@ -60,7 +61,7 @@ export default function DatabaseAdminPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pb-[72px] md:pb-0">
+      <SidebarContent>
         {/* Header */}
         <div className="crm-header sticky top-0 z-10 shrink-0">
           <div className="px-3 sm:px-6 py-2.5 sm:py-4">
@@ -190,7 +191,7 @@ export default function DatabaseAdminPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </SidebarContent>
     </div>
   )
 }

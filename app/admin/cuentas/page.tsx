@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Account } from '@/lib/types/account'
 import { CRMSidebar } from '@/components/crm-sidebar'
+import { SidebarContent } from '@/components/sidebar-layout'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -46,7 +47,7 @@ export default function CuentasPage() {
     <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen pb-[72px] md:pb-0 overflow-x-hidden">
+      <SidebarContent>
         {/* Header */}
         <div className="crm-header sticky top-0 z-10 shrink-0">
           <div className="px-3 sm:px-6 py-2.5 sm:py-4">
@@ -197,7 +198,7 @@ export default function CuentasPage() {
             </>
           )}
         </div>
-      </div>
+      </SidebarContent>
     </div>
   )
 }
