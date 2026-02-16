@@ -25,6 +25,7 @@ function calcAvgFirstContact(leads: Lead[]): string {
 interface KpiConfig {
   key: string
   label: string
+  shortLabel: string
   icon: typeof Users
   accent: string
   iconColor: string
@@ -36,6 +37,7 @@ const KPI_CONFIG: KpiConfig[] = [
   {
     key: 'total',
     label: 'Total Leads',
+    shortLabel: 'Total',
     icon: Users,
     accent: 'bg-[var(--crm-info-light)]',
     iconColor: 'text-[var(--crm-info)]',
@@ -44,6 +46,7 @@ const KPI_CONFIG: KpiConfig[] = [
   {
     key: 'ganados',
     label: 'Ganados',
+    shortLabel: 'Ganados',
     icon: TrendingUp,
     accent: 'bg-[var(--crm-success-light)]',
     iconColor: 'text-[var(--crm-success)]',
@@ -52,6 +55,7 @@ const KPI_CONFIG: KpiConfig[] = [
   {
     key: 'conversion',
     label: 'Conversión',
+    shortLabel: 'Conv.',
     icon: Percent,
     accent: 'bg-violet-50',
     iconColor: 'text-violet-600',
@@ -64,6 +68,7 @@ const KPI_CONFIG: KpiConfig[] = [
   {
     key: 'overdue',
     label: 'Vencidas',
+    shortLabel: 'Venc.',
     icon: AlertCircle,
     accent: 'bg-[var(--crm-danger-light)]',
     iconColor: 'text-[var(--crm-danger)]',
@@ -76,6 +81,7 @@ const KPI_CONFIG: KpiConfig[] = [
   {
     key: 'avg-first-contact',
     label: '1er Contacto',
+    shortLabel: '1er C.',
     icon: Clock,
     accent: 'bg-[var(--crm-warning-light)]',
     iconColor: 'text-[var(--crm-warning)]',
@@ -85,44 +91,83 @@ const KPI_CONFIG: KpiConfig[] = [
 
 export function KpiCards({ leads }: KpiCardsProps) {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2.5">
-      {KPI_CONFIG.map((kpi) => {
-        const Icon = kpi.icon
-        const isAlert = kpi.alert?.(leads)
-        return (
-          <div
-            key={kpi.key}
-            className={cn(
-              'crm-card flex items-center gap-2 sm:gap-3 px-2 py-2 sm:px-3 sm:py-2.5 group',
-              isAlert && 'border-red-200'
-            )}
-          >
-            <div className={cn('flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-[var(--crm-radius-md)] shrink-0 transition-transform group-hover:scale-105', kpi.accent)}>
-              <Icon className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4', kpi.iconColor)} />
+    <>
+      {/* Mobile: 5 KPIs in one row, ultra compact */}
+      <div className="flex sm:hidden gap-1.5">
+        {KPI_CONFIG.map((kpi) => {
+          const isAlert = kpi.alert?.(leads)
+          return (
+            <div
+              key={kpi.key}
+              className={cn(
+                'flex-1 min-w-0 rounded-lg border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] px-1.5 py-1.5 text-center',
+                isAlert && 'border-red-200'
+              )}
+            >
+              <p className={cn('text-[14px] font-bold leading-tight crm-mono', isAlert ? 'text-[var(--crm-danger)]' : 'text-[var(--crm-text)]')}>
+                {kpi.getValue(leads)}
+              </p>
+              <p className="text-[8px] font-medium text-[var(--crm-text-muted)] uppercase tracking-wide leading-tight mt-0.5 truncate">
+                {kpi.shortLabel}
+              </p>
             </div>
-            <div className="min-w-0">
-              <p className="crm-label truncate text-[9px] sm:text-[10px]">{kpi.label}</p>
-              <p className={cn('crm-value text-[15px] sm:text-[18px]', isAlert && 'text-[var(--crm-danger)]')}>{kpi.getValue(leads)}</p>
+          )
+        })}
+      </div>
+
+      {/* Desktop: full cards with icons */}
+      <div className="hidden sm:grid sm:grid-cols-5 gap-2.5">
+        {KPI_CONFIG.map((kpi) => {
+          const Icon = kpi.icon
+          const isAlert = kpi.alert?.(leads)
+          return (
+            <div
+              key={kpi.key}
+              className={cn(
+                'crm-card flex items-center gap-3 px-3 py-2.5 group',
+                isAlert && 'border-red-200'
+              )}
+            >
+              <div className={cn('flex h-8 w-8 items-center justify-center rounded-[var(--crm-radius-md)] shrink-0 transition-transform group-hover:scale-105', kpi.accent)}>
+                <Icon className={cn('h-4 w-4', kpi.iconColor)} />
+              </div>
+              <div className="min-w-0">
+                <p className="crm-label truncate">{kpi.label}</p>
+                <p className={cn('crm-value text-[18px]', isAlert && 'text-[var(--crm-danger)]')}>{kpi.getValue(leads)}</p>
+              </div>
             </div>
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
 export function KpiCardsSkeleton() {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="crm-card flex items-center gap-2 sm:gap-3 px-2 py-2 sm:px-3 sm:py-2.5">
-          <div className="crm-skeleton h-7 w-7 sm:h-8 sm:w-8 rounded-[var(--crm-radius-md)] shrink-0" />
-          <div className="flex-1 space-y-1.5">
-            <div className="crm-skeleton h-2.5 w-16" />
-            <div className="crm-skeleton h-5 w-10" />
+    <>
+      {/* Mobile skeleton */}
+      <div className="flex sm:hidden gap-1.5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex-1 min-w-0 rounded-lg border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] px-1.5 py-1.5 text-center">
+            <div className="crm-skeleton h-4 w-8 mx-auto mb-1" />
+            <div className="crm-skeleton h-2 w-10 mx-auto" />
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* Desktop skeleton */}
+      <div className="hidden sm:grid sm:grid-cols-5 gap-2.5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="crm-card flex items-center gap-3 px-3 py-2.5">
+            <div className="crm-skeleton h-8 w-8 rounded-[var(--crm-radius-md)] shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="crm-skeleton h-2.5 w-16" />
+              <div className="crm-skeleton h-5 w-10" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
