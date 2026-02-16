@@ -285,27 +285,8 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
         <div className="flex-1 overflow-y-auto">
           {/* ═══ RESUMEN ═══ */}
           {tab === 'resumen' && (
-            <div className="px-5 py-4 space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-subtle)] px-3 py-2">
-                  <p className="crm-label">Contacto</p>
-                  <p className="crm-body truncate mt-0.5">{lead.email}</p>
-                  <p className="crm-meta mt-0.5">{lead.telefono}</p>
-                </div>
-                <div className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-subtle)] px-3 py-2">
-                  <p className="crm-label">Inversión</p>
-                  <p className="text-[15px] font-semibold text-[var(--crm-text)] crm-mono mt-0.5">{lead.inversionEstimada || '—'}</p>
-                  <p className="crm-meta crm-mono mt-0.5">{ageDays}d en pipeline</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="crm-badge bg-[var(--crm-bg-subtle)] text-[var(--crm-text-secondary)]">{lead.producto === 'alfajores' ? 'Alfajores' : 'Galletitas'}</span>
-                <span className="crm-badge bg-[var(--crm-bg-subtle)] text-[var(--crm-text-muted)]">{lead.volumen === 'menos-1000' ? '<1K' : lead.volumen === '1000-5000' ? '1-5K' : '>5K'}/mes</span>
-                {lead.owner && <span className="crm-badge bg-[var(--crm-bg-subtle)] text-[var(--crm-text-muted)]">{lead.owner}</span>}
-                {lead.source && <span className="crm-badge bg-[var(--crm-bg-subtle)] text-[var(--crm-text-muted)]">📍 {lead.source}</span>}
-              </div>
-
+            <div className="px-5 py-4 space-y-4">
+              {/* Acciones rápidas */}
               <div className="flex items-center gap-1.5">
                 <Button variant="outline" size="sm" className="h-7 text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]" onClick={() => window.open(`mailto:${lead.email}`, '_blank')}>
                   <Mail className="h-3 w-3" /> Email
@@ -316,6 +297,108 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                 <Button variant="outline" size="sm" className="h-7 text-[12px] gap-1.5 rounded-[var(--crm-radius-md)] border-[var(--crm-border)] text-[var(--crm-success)] hover:bg-[var(--crm-success-light)]" onClick={handleWhatsAppClick}>
                   <MessageCircle className="h-3 w-3" /> WhatsApp
                 </Button>
+              </div>
+
+              {/* Datos del formulario */}
+              <div className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] overflow-hidden">
+                <div className="px-3 py-2 bg-[var(--crm-bg-subtle)] border-b border-[var(--crm-border-light)]">
+                  <p className="crm-label font-semibold">Información del lead</p>
+                </div>
+                <div className="divide-y divide-[var(--crm-border-light)]">
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Nombre</span>
+                    <span className="crm-body font-medium text-[var(--crm-text)]">{lead.nombre}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Empresa</span>
+                    <span className="crm-body font-medium text-[var(--crm-text)]">{lead.empresa}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Email</span>
+                    <a href={`mailto:${lead.email}`} className="crm-body text-[var(--crm-primary)] hover:underline truncate">{lead.email}</a>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Teléfono</span>
+                    <a href={`tel:${lead.telefono}`} className="crm-body text-[var(--crm-primary)] hover:underline">{lead.telefono}</a>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Producto</span>
+                    <span className="crm-body text-[var(--crm-text)]">{lead.producto === 'alfajores' ? 'Alfajores' : 'Galletitas'}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Marca registrada</span>
+                    <span className="crm-body text-[var(--crm-text)]">{lead.marca === 'si' ? 'Sí' : 'No'}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Volumen mensual</span>
+                    <span className="crm-body text-[var(--crm-text)]">
+                      {lead.volumen === 'menos-1000' ? 'Menos de 1,000 u/mes' : lead.volumen === '1000-5000' ? '1,000 - 5,000 u/mes' : 'Más de 5,000 u/mes'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Envasado</span>
+                    <span className="crm-body text-[var(--crm-text)]">
+                      {lead.envasado === 'flowpack-personalizado' ? 'Flowpack Personalizado' : lead.envasado === 'flowpack-cristal' ? 'Flowpack Cristal' : 'A Granel'}
+                    </span>
+                  </div>
+                  {lead.inversionEstimada && (
+                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta">Inversión estimada</span>
+                      <span className="crm-body font-semibold text-[var(--crm-text)] crm-mono">${lead.inversionEstimada}</span>
+                    </div>
+                  )}
+                  {lead.mensaje && (
+                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta">Mensaje</span>
+                      <span className="crm-body text-[var(--crm-text)]">{lead.mensaje}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Info adicional */}
+              <div className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] overflow-hidden">
+                <div className="px-3 py-2 bg-[var(--crm-bg-subtle)] border-b border-[var(--crm-border-light)]">
+                  <p className="crm-label font-semibold">Estado del pipeline</p>
+                </div>
+                <div className="divide-y divide-[var(--crm-border-light)]">
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Etapa</span>
+                    <span className={cn('crm-badge inline-flex w-fit', stageConfig?.badge)}>
+                      <span className={cn('h-1.5 w-1.5 rounded-full mr-1', stageConfig?.dot)} />
+                      {stageConfig?.label}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Días en pipeline</span>
+                    <span className="crm-body crm-mono text-[var(--crm-text)]">{ageDays} días</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Creado</span>
+                    <span className="crm-body crm-mono text-[var(--crm-text)]">{new Date(lead.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                    <span className="crm-meta">Actualizado</span>
+                    <span className="crm-body crm-mono text-[var(--crm-text)]">{new Date(lead.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                  {lead.owner && (
+                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta">Owner</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white', getOwnerColor(lead.owner))}>
+                          {getOwnerInitial(lead.owner)}
+                        </span>
+                        <span className="crm-body text-[var(--crm-text)]">{lead.owner}</span>
+                      </div>
+                    </div>
+                  )}
+                  {lead.source && (
+                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
+                      <span className="crm-meta">Fuente</span>
+                      <span className="crm-body text-[var(--crm-text)] capitalize">{lead.source}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Next task preview */}
