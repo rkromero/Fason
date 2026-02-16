@@ -24,12 +24,30 @@ export default function CRMPage() {
   const router = useRouter()
   const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_FILTERS)
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
+
+  // Default to list view on mobile
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setViewMode('list')
+    }
+  }, [])
   const [convertLead, setConvertLead] = useState<Lead | null>(null)
   const [showConverted, setShowConverted] = useState(false)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
 
   // Use the custom hook for leads
-  const { leads, totalLeads, isLoading, error, refetch, updateLead, deleteLead } = useLeads(filters)
+  const {
+    leads,
+    totalLeads,
+    isLoading,
+    error,
+    refetch,
+    updateLead,
+    deleteLead,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useLeads(filters)
 
   // Fetch users (kept separate for now, could be its own hook)
   const { data: users = [] } = useQuery<User[]>({
@@ -328,6 +346,32 @@ export default function CRMPage() {
                     onDeleteLead={handleDeleteLead}
                   />
                 )
+              )}
+
+              {/* Load More Button */}
+              {!isLoading && !error && hasNextPage && !showConverted && (
+                <div className="py-4 flex justify-center w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="gap-2"
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Cargando más...
+                      </>
+                    ) : (
+                      <>
+                        Cargar más leads
+                        <span className="text-xs text-muted-foreground ml-1">
+                          ({leads.length} de {totalLeads})
+                        </span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               )}
             </>
           )}

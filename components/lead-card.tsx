@@ -288,8 +288,8 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
             </div>
 
             {/* "..." menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu modal={true}>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -302,7 +302,7 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
                   <MoreHorizontal className="h-3.5 w-3.5 text-[var(--crm-text-muted)]" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuContent align="end" sideOffset={4} className="w-44 bg-white border border-[var(--crm-border)] shadow-lg">
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDialogOpen(true) }}>
                   <Eye className="h-3.5 w-3.5 mr-2" />
                   Ver detalles

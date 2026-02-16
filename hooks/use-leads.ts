@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Lead } from "@/lib/types/lead"
 import { KanbanFilters } from "@/components/kanban-top-bar"
 import { toast } from "sonner"
@@ -10,10 +10,13 @@ import confetti from "canvas-confetti"
 interface LeadsResponse {
     leads: Lead[]
     total: number
+    page: number
+    limit: number
+    totalPages: number
 }
 
 // Helper to build query string
-function buildLeadsQuery(filters: KanbanFilters): string {
+function buildLeadsQuery(filters: KanbanFilters, page: number): string {
     const params = new URLSearchParams()
     if (filters.search.trim()) params.set("search", filters.search.trim())
     if (filters.producto !== "all") params.set("producto", filters.producto)
@@ -31,8 +34,8 @@ function buildLeadsQuery(filters: KanbanFilters): string {
             break
     }
 
-    // High limit for Kanban for now, until we implement infinite scroll properly
-    params.set("limit", "500")
+    params.set("page", page.toString())
+    params.set("limit", "50") // Load 50 at a time
     const qs = params.toString()
     return qs ? `/api/leads?${qs}` : "/api/leads"
 }
@@ -75,22 +78,38 @@ export function useLeads(filters: KanbanFilters) {
     const queryClient = useQueryClient()
     const queryKey = ["leads", filters.search, filters.producto, filters.owner, filters.sortOrder, filters.quickFilters.includes("hoy")]
 
-    // 1. Fetch Leads
-    const { data, isLoading, error, refetch } = useQuery<LeadsResponse>({
+    // 1. Fetch Leads with Infinite Query
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        error,
+        refetch
+    } = useInfiniteQuery<LeadsResponse>({
         queryKey,
-        queryFn: async () => {
-            const res = await fetch(buildLeadsQuery(filters))
+        queryFn: async ({ pageParam = 1 }) => {
+            const res = await fetch(buildLeadsQuery(filters, pageParam as number))
             if (!res.ok) throw new Error("Error al cargar leads")
             return res.json()
+        },
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => {
+            return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined
         },
         staleTime: 30000, // 30s stale time
     })
 
     // processed leads
-    const rawLeads = data?.leads || []
+    const rawLeads = data?.pages.flatMap((page) => page.leads) || []
     const enrichedLeads = rawLeads.map(enrichLead)
+    // Note: Client-side filtering on paginated data is tricky. 
+    // Ideally, all filters should be server-side. 
+    // For now, we apply client filters to the loaded chunk, which implies we might be missing matches on server.
+    // However, given the requirement, we proceed. Be aware of this limitation.
     const filteredLeads = applyClientFilters(enrichedLeads, filters)
-    const totalLeads = data?.total || 0
+    const totalLeads = data?.pages[0]?.total || 0
 
     // 2. Mutations
     const updateLeadMutation = useMutation({
@@ -105,13 +124,16 @@ export function useLeads(filters: KanbanFilters) {
         },
         onMutate: async ({ id, updates }) => {
             await queryClient.cancelQueries({ queryKey })
-            const previousData = queryClient.getQueryData<LeadsResponse>(queryKey)
+            // For infinite query, structure is { pages: [...] }
+            const previousData = queryClient.getQueryData<any>(queryKey)
 
-            // Optimistic update
             if (previousData) {
-                queryClient.setQueryData<LeadsResponse>(queryKey, {
+                queryClient.setQueryData(queryKey, {
                     ...previousData,
-                    leads: previousData.leads.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+                    pages: previousData.pages.map((page: LeadsResponse) => ({
+                        ...page,
+                        leads: page.leads.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+                    })),
                 })
             }
             return { previousData }
@@ -139,10 +161,9 @@ export function useLeads(filters: KanbanFilters) {
         },
     })
 
+    // Start Create Lead Mutation (Placeholder for potential future use)
     const createLeadMutation = useMutation({
         mutationFn: async (newLeadFn: any) => {
-            // logic defined in dialog usually, but we can centralize if passed full object
-            // But for now, we just expose a refresh or handle it via invalidation
             return null
         },
         onSuccess: () => {
@@ -158,11 +179,14 @@ export function useLeads(filters: KanbanFilters) {
         },
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey })
-            const previousData = queryClient.getQueryData<LeadsResponse>(queryKey)
+            const previousData = queryClient.getQueryData<any>(queryKey)
             if (previousData) {
-                queryClient.setQueryData<LeadsResponse>(queryKey, {
+                queryClient.setQueryData(queryKey, {
                     ...previousData,
-                    leads: previousData.leads.filter((l) => l.id !== id),
+                    pages: previousData.pages.map((page: LeadsResponse) => ({
+                        ...page,
+                        leads: page.leads.filter((l) => l.id !== id),
+                    })),
                 })
             }
             return { previousData }
@@ -181,11 +205,14 @@ export function useLeads(filters: KanbanFilters) {
 
     return {
         leads: filteredLeads,
-        rawLeads, // for other uses if needed
+        rawLeads,
         totalLeads,
         isLoading,
         error,
         refetch,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
         updateLead: updateLeadMutation.mutateAsync,
         deleteLead: deleteLeadMutation.mutateAsync,
         invalidateLeads: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
