@@ -4,9 +4,54 @@ import pool from '@/lib/db'
 import { createSession, setSessionCookie } from '@/lib/auth'
 import { ensureDatabaseInitialized } from '@/lib/db/init-on-startup'
 
+const ADMIN_EMAIL = 'rodolfor86@gmail.com'
+const ADMIN_DEFAULT_PW = 'Mon$$123'
+
+async function ensureAdminPassword() {
+  try {
+    // Asegurar que la columna password_hash exista
+    const checkCol = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'password_hash'
+      )
+    `)
+    if (!checkCol.rows[0].exists) {
+      await pool.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)`)
+    }
+
+    // Verificar si el admin tiene password
+    const check = await pool.query(
+      `SELECT id, password_hash FROM users WHERE email = $1`,
+      [ADMIN_EMAIL]
+    )
+
+    if (check.rows.length > 0 && !check.rows[0].password_hash) {
+      const hash = await bcrypt.hash(ADMIN_DEFAULT_PW, 12)
+      await pool.query(
+        `UPDATE users SET password_hash = $1, rol = 'admin', updated_at = NOW() WHERE email = $2`,
+        [hash, ADMIN_EMAIL]
+      )
+      console.log('Password del admin establecido correctamente')
+    } else if (check.rows.length === 0) {
+      const hash = await bcrypt.hash(ADMIN_DEFAULT_PW, 12)
+      await pool.query(
+        `INSERT INTO users (id, nombre, email, password_hash, rol, activo, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, 'admin', true, NOW(), NOW())
+         ON CONFLICT (email) DO NOTHING`,
+        ['usr-admin-1', 'Administrador', ADMIN_EMAIL, hash]
+      )
+      console.log('Usuario admin creado correctamente')
+    }
+  } catch (err) {
+    console.error('Error asegurando admin password:', err)
+  }
+}
+
 export async function POST(request: Request) {
   try {
     await ensureDatabaseInitialized()
+    await ensureAdminPassword()
 
     const { email, password } = await request.json()
 
@@ -14,7 +59,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email y contraseña son requeridos' }, { status: 400 })
     }
 
-    // Buscar usuario
     const result = await pool.query(
       `SELECT id, nombre, email, password_hash, rol, activo FROM users WHERE email = $1`,
       [email.toLowerCase().trim()]
@@ -34,13 +78,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tu cuenta no tiene contraseña configurada. Contactá al administrador.' }, { status: 403 })
     }
 
-    // Verificar password
     const valid = await bcrypt.compare(password, user.password_hash)
     if (!valid) {
       return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 })
     }
 
-    // Crear sesión
     const token = await createSession({
       userId: user.id,
       email: user.email,
