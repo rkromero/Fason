@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, BarChart3, Settings, Database } from 'lucide-react'
+import { LayoutDashboard, Users, UserCog, BarChart3, Settings, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarItem {
@@ -12,7 +12,8 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  { title: 'LEADS', href: '/admin/crm', icon: Users },
+  { title: 'Leads', href: '/admin/crm', icon: Users },
+  { title: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
   { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { title: 'Estadísticas', href: '/admin/estadisticas', icon: BarChart3 },
   { title: 'Base de Datos', href: '/admin/db', icon: Database },

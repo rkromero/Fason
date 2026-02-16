@@ -21,7 +21,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { LEAD_SOURCES, MOCK_OWNERS } from '@/lib/types/lead'
+import { LEAD_SOURCES } from '@/lib/types/lead'
+import { User } from '@/lib/types/user'
 
 export type QuickFilter = 'hoy' | 'vencidos' | 'sin-tarea' | 'alta-prioridad'
 export type SortOrder = 'ultima-actividad' | 'proxima-tarea' | 'mayor-monto'
@@ -61,9 +62,10 @@ interface KanbanTopBarProps {
   filters: KanbanFilters
   onFiltersChange: (filters: KanbanFilters) => void
   activeFilterCount: number
+  users?: User[]
 }
 
-export function KanbanTopBar({ filters, onFiltersChange, activeFilterCount }: KanbanTopBarProps) {
+export function KanbanTopBar({ filters, onFiltersChange, activeFilterCount, users = [] }: KanbanTopBarProps) {
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const toggleQuickFilter = (qf: QuickFilter) => {
@@ -215,8 +217,8 @@ export function KanbanTopBar({ filters, onFiltersChange, activeFilterCount }: Ka
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {MOCK_OWNERS.map((o) => (
-                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

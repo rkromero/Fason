@@ -85,12 +85,13 @@ export interface Lead {
   mensaje?: string
   inversionEstimada?: string
   stage: LeadStage
+  ownerId?: string
+  owner?: string
   createdAt: string
   updatedAt: string
   notes?: string[]
   lastContact?: string
   source?: LeadSource
-  owner?: string
   priority?: LeadPriority
   tags?: string[]
   nextTaskDate?: string
@@ -113,8 +114,6 @@ export const LEAD_SOURCES: Array<{ id: LeadSource; label: string }> = [
   { id: 'otro', label: 'Otro' },
 ]
 
-/** Owners mock */
-export const MOCK_OWNERS = ['Carlos M.', 'Ana P.', 'Lucas R.', 'María G.']
 
 export interface StageConfig {
   id: LeadStage

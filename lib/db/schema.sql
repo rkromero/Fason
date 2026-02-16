@@ -1,6 +1,21 @@
 -- Esquema de la base de datos para el CRM
--- Ejecutar este script en PostgreSQL para crear la tabla de leads
 
+-- ─── Tabla de usuarios ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(255) PRIMARY KEY,
+  nombre VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  telefono VARCHAR(50),
+  rol VARCHAR(50) NOT NULL DEFAULT 'vendedor' CHECK (rol IN ('admin', 'vendedor', 'viewer')),
+  activo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_activo ON users(activo);
+
+-- ─── Tabla de leads ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS leads (
   id VARCHAR(255) PRIMARY KEY,
   nombre VARCHAR(255) NOT NULL,
@@ -14,20 +29,15 @@ CREATE TABLE IF NOT EXISTS leads (
   mensaje TEXT,
   inversion_estimada VARCHAR(100),
   stage VARCHAR(50) NOT NULL DEFAULT 'entrante' CHECK (stage IN ('entrante', 'primer-llamado', 'seguimiento', 'negociacion', 'ganado', 'perdido')),
+  owner_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   notes JSONB DEFAULT '[]'::jsonb,
   last_contact TIMESTAMP WITH TIME ZONE
 );
 
--- Índices para mejorar el rendimiento de las consultas
 CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage);
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 CREATE INDEX IF NOT EXISTS idx_leads_empresa ON leads(empresa);
-
--- Comentarios para documentación
-COMMENT ON TABLE leads IS 'Tabla principal para almacenar los leads del CRM';
-COMMENT ON COLUMN leads.notes IS 'Array de notas en formato JSON';
-COMMENT ON COLUMN leads.stage IS 'Etapa actual del lead en el proceso de ventas';
-
+CREATE INDEX IF NOT EXISTS idx_leads_owner_id ON leads(owner_id);

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Lead, LeadStage, LeadTask, TaskType, Activity, STAGES, TASK_TYPES, LOST_REASONS, LostReason,
   getNextTask, isTaskOverdue,
 } from '@/lib/types/lead'
+import { User } from '@/lib/types/user'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
@@ -99,6 +100,15 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
 
   // Ficha
   const [ficha, setFicha] = useState(lead.fichaFason || {})
+
+  // Users for owner assignment
+  const [availableUsers, setAvailableUsers] = useState<User[]>([])
+  useEffect(() => {
+    fetch('/api/users')
+      .then((r) => r.ok ? r.json() : { users: [] })
+      .then((data) => setAvailableUsers((data.users || []).filter((u: User) => u.activo)))
+      .catch(() => {})
+  }, [])
 
   const timeline = useMemo(() => buildTimeline(lead), [lead])
   const tasks = lead.tasks || []
@@ -373,23 +383,34 @@ export function LeadDrawer({ lead, open, onOpenChange, onUpdateLead }: LeadDrawe
                     <span className="crm-meta">Actualizado</span>
                     <span className="crm-body crm-mono text-[var(--crm-text)]">{new Date(lead.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                   </div>
-                  {lead.owner && (
-                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                      <span className="crm-meta">Owner</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white', getOwnerColor(lead.owner))}>
-                          {getOwnerInitial(lead.owner)}
-                        </span>
-                        <span className="crm-body text-[var(--crm-text)]">{lead.owner}</span>
-                      </div>
-                    </div>
-                  )}
-                  {lead.source && (
-                    <div className="grid grid-cols-[120px_1fr] px-3 py-2">
-                      <span className="crm-meta">Fuente</span>
-                      <span className="crm-body text-[var(--crm-text)] capitalize">{lead.source}</span>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-[120px_1fr] px-3 py-2 items-center">
+                    <span className="crm-meta">Asignado a</span>
+                    <Select
+                      value={lead.ownerId || 'sin-asignar'}
+                      onValueChange={(val) => {
+                        const ownerId = val === 'sin-asignar' ? '' : val
+                        doUpdate({ ownerId: ownerId || undefined })
+                      }}
+                      disabled={isUpdating}
+                    >
+                      <SelectTrigger className="h-7 text-[12px] border-[var(--crm-border)] rounded-[var(--crm-radius-md)]">
+                        <SelectValue placeholder="Sin asignar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sin-asignar">Sin asignar</SelectItem>
+                        {availableUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            <span className="flex items-center gap-1.5">
+                              <span className={cn('flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white', getOwnerColor(u.nombre))}>
+                                {getOwnerInitial(u.nombre)}
+                              </span>
+                              {u.nombre}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

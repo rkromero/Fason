@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Lead } from '@/lib/types/lead'
+import { User } from '@/lib/types/user'
 import { KanbanBoard } from '@/components/kanban-board'
 import { LeadsListView } from '@/components/leads-list-view'
 import { KanbanTopBar, KanbanFilters, DEFAULT_FILTERS } from '@/components/kanban-top-bar'
@@ -64,7 +65,7 @@ function applyFilters(leads: Lead[], filters: KanbanFilters): Lead[] {
 
   if (filters.source !== 'all') result = result.filter((l) => l.source === filters.source)
   if (filters.producto !== 'all') result = result.filter((l) => l.producto === filters.producto)
-  if (filters.owner !== 'all') result = result.filter((l) => l.owner === filters.owner)
+  if (filters.owner !== 'all') result = result.filter((l) => l.ownerId === filters.owner)
 
   result = [...result].sort((a, b) => {
     switch (filters.sortOrder) {
@@ -99,6 +100,7 @@ function countActiveFilters(filters: KanbanFilters): number {
 // ─── Page ───────────────────────────────────────────────────────
 export default function CRMPage() {
   const [rawLeads, setRawLeads] = useState<Lead[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
@@ -114,13 +116,20 @@ export default function CRMPage() {
     setError(null)
     setLoading(true)
     try {
-      const response = await fetch('/api/leads')
-      if (response.ok) {
-        const data = await response.json()
+      const [leadsRes, usersRes] = await Promise.all([
+        fetch('/api/leads'),
+        fetch('/api/users'),
+      ])
+      if (leadsRes.ok) {
+        const data = await leadsRes.json()
         setRawLeads(data.leads)
       } else {
         setError('No se pudieron cargar los leads. Intentá de nuevo.')
         toast.error('Error al cargar los leads')
+      }
+      if (usersRes.ok) {
+        const data = await usersRes.json()
+        setUsers((data.users || []).filter((u: User) => u.activo))
       }
     } catch (err) {
       console.error('Error al obtener leads:', err)
@@ -297,6 +306,7 @@ export default function CRMPage() {
                 filters={filters}
                 onFiltersChange={setFilters}
                 activeFilterCount={activeFilterCount}
+                users={users}
               />
 
               {/* No results with filters */}
