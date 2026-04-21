@@ -209,7 +209,7 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[100]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-50">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>

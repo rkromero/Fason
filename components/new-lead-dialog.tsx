@@ -133,16 +133,16 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[85vh] overflow-y-auto mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Nuevo Lead</DialogTitle>
-          <DialogDescription>
-            Completa los datos del nuevo lead para agregarlo al CRM
+          <DialogTitle className="text-lg sm:text-2xl">Nuevo Lead</DialogTitle>
+          <DialogDescription className="text-[12px] sm:text-[14px]">
+            Completá los datos del nuevo lead
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Nombre */}
             <div className="space-y-2">
               <Label htmlFor="nombre">
@@ -317,16 +317,17 @@ export function NewLeadDialog({ open, onOpenChange, onLeadCreated }: NewLeadDial
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
               onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

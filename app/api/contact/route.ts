@@ -1,15 +1,23 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
+import { escapeHtml } from '@/lib/sanitize'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: Request) {
   try {
-    // Validar que RESEND_API_KEY esté configurada
+    // Rate limiting: máximo 3 envíos por IP cada 10 minutos
+    const ip = getClientIp(request)
+    const rl = checkRateLimit(`contact:${ip}`, { windowMs: 10 * 60 * 1000, maxRequests: 3 })
+    if (!rl.allowed) {
+      return rateLimitResponse(rl.retryAfterMs)
+    }
+
     if (!process.env.RESEND_API_KEY) {
       console.error('RESEND_API_KEY no está configurada')
       return NextResponse.json(
-        { error: 'Error de configuración del servidor: RESEND_API_KEY no está configurada. Por favor, contactá al administrador.' },
+        { error: 'Error de configuración del servidor.' },
         { status: 500 }
       )
     }
@@ -28,19 +36,33 @@ export async function POST(request: Request) {
       inversionEstimada,
     } = body
 
-    // Validar campos requeridos
     if (!nombre || !email || !telefono || !empresa || !producto || !marca || !volumen || !envasado) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    // Obtener email de destino desde variables de entorno (o usar uno por defecto)
+    // Validaciones básicas de formato
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
+    }
+
+    if (nombre.length > 200 || empresa.length > 200 || (mensaje && mensaje.length > 5000)) {
+      return NextResponse.json({ error: 'Campos exceden el largo máximo' }, { status: 400 })
+    }
+
+    // Sanitizar todos los valores para prevenir XSS en el HTML del email
+    const safe = {
+      nombre: escapeHtml(nombre),
+      empresa: escapeHtml(empresa),
+      email: escapeHtml(email),
+      telefono: escapeHtml(telefono),
+      mensaje: mensaje ? escapeHtml(mensaje) : '',
+      inversionEstimada: inversionEstimada ? escapeHtml(inversionEstimada) : '',
+    }
+
     const emailTo = process.env.EMAIL_TO || process.env.EMAIL_FROM || 'contacto@fasonpro.com.ar'
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev'
 
-    // Formatear los datos para el email
     const tipoProducto = producto === 'alfajores' ? 'Alfajores' : 'Galletitas'
     const tipoEnvasado =
       envasado === 'a-granel'
@@ -56,11 +78,10 @@ export async function POST(request: Request) {
         ? '1.000 - 5.000 unidades'
         : 'Más de 5.000 unidades'
 
-    // Enviar email
     const { data, error } = await resend.emails.send({
       from: emailFrom,
       to: emailTo,
-      subject: `Nueva consulta de cotización - ${empresa}`,
+      subject: `Nueva consulta de cotización - ${safe.empresa}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -88,22 +109,22 @@ export async function POST(request: Request) {
                 
                 <div class="field">
                   <span class="label">Nombre y apellido:</span>
-                  <span class="value">${nombre}</span>
+                  <span class="value">${safe.nombre}</span>
                 </div>
                 
                 <div class="field">
                   <span class="label">Empresa o marca:</span>
-                  <span class="value">${empresa}</span>
+                  <span class="value">${safe.empresa}</span>
                 </div>
                 
                 <div class="field">
                   <span class="label">Email:</span>
-                  <span class="value"><a href="mailto:${email}">${email}</a></span>
+                  <span class="value"><a href="mailto:${safe.email}">${safe.email}</a></span>
                 </div>
                 
                 <div class="field">
                   <span class="label">Teléfono:</span>
-                  <span class="value"><a href="tel:${telefono}">${telefono}</a></span>
+                  <span class="value"><a href="tel:${safe.telefono}">${safe.telefono}</a></span>
                 </div>
                 
                 <h2 style="color: #dc2626; margin-top: 30px;">Detalles del Proyecto</h2>
@@ -128,18 +149,18 @@ export async function POST(request: Request) {
                   <span class="value">${tipoEnvasado}</span>
                 </div>
                 
-                ${mensaje ? `
+                ${safe.mensaje ? `
                 <div class="field">
                   <span class="label">Mensaje:</span>
-                  <div class="value" style="white-space: pre-wrap;">${mensaje}</div>
+                  <div class="value" style="white-space: pre-wrap;">${safe.mensaje}</div>
                 </div>
                 ` : ''}
                 
-                ${inversionEstimada ? `
+                ${safe.inversionEstimada ? `
                 <div class="inversion">
                   <div class="label">Inversión estimada:</div>
                   <div style="font-size: 24px; font-weight: bold; color: #dc2626; margin-top: 5px;">
-                    ${inversionEstimada}
+                    ${safe.inversionEstimada}
                   </div>
                 </div>
                 ` : ''}
@@ -157,14 +178,15 @@ export async function POST(request: Request) {
     if (error) {
       console.error('Error al enviar email con Resend:', error)
       return NextResponse.json(
-        { error: `Error al enviar el email: ${error instanceof Error ? error.message : 'Error desconocido de Resend'}` },
+        { error: 'Error al enviar el email' },
         { status: 500 }
       )
     }
 
-    // Crear lead automáticamente en el CRM
+    // Crear lead automáticamente en el CRM (datos originales sin escapar para la DB)
     try {
       const { createLead } = await import('@/lib/db/queries')
+      const { createActivity } = await import('@/lib/db/activity-queries')
       const newLead = await createLead({
         nombre,
         empresa,
@@ -178,11 +200,15 @@ export async function POST(request: Request) {
         inversionEstimada,
         stage: 'entrante',
         notes: [],
+        source: 'web',
+      })
+      await createActivity(newLead.id, {
+        type: 'created',
+        content: 'Lead creado automáticamente desde formulario web',
       })
       console.log('Lead creado automáticamente en el CRM:', newLead.id)
     } catch (leadError) {
       console.error('Error al crear lead en el CRM:', leadError)
-      // No fallar el request si solo falla la creación del lead
     }
 
     return NextResponse.json(
@@ -191,11 +217,9 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error('Error en API contact:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
     return NextResponse.json(
-      { error: `Error interno del servidor: ${errorMessage}` },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }
 }
-

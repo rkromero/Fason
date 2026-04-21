@@ -1,185 +1,395 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Lead } from '@/lib/types/lead'
-import { KanbanBoard } from '@/components/kanban-board'
-import { Button } from '@/components/ui/button'
-import { RefreshCw, TrendingUp, Users, Plus } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { Lead } from '@/lib/types/lead'
+import { User } from '@/lib/types/user'
+import { KanbanBoard } from '@/components/kanban-board'
+import { LeadsListView } from '@/components/leads-list-view'
+import { KanbanTopBar, KanbanFilters, DEFAULT_FILTERS } from '@/components/kanban-top-bar'
+import { KpiCards, KpiCardsSkeleton } from '@/components/kpi-cards'
+import { Button } from '@/components/ui/button'
+import { RefreshCw, Plus, AlertTriangle, Inbox, LayoutGrid, List, Archive } from 'lucide-react'
+import { toast } from 'sonner'
 import { NewLeadDialog } from '@/components/new-lead-dialog'
+import { ConvertLeadModal } from '@/components/convert-lead-modal'
 import { CRMSidebar } from '@/components/crm-sidebar'
+import { SidebarContent } from '@/components/sidebar-layout'
+import { cn } from '@/lib/utils'
+import { useLeads } from '@/hooks/use-leads'
+import { useQuery } from '@tanstack/react-query'
 
+// ─── Page ───────────────────────────────────────────────────────
 export default function CRMPage() {
   const router = useRouter()
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [loading, setLoading] = useState(true)
+  const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_FILTERS)
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
+
+  // Default to list view on mobile
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setViewMode('list')
+    }
+  }, [])
+  const [convertLead, setConvertLead] = useState<Lead | null>(null)
+  const [showConverted, setShowConverted] = useState(false)
   const [isNewLeadDialogOpen, setIsNewLeadDialogOpen] = useState(false)
 
-  const fetchLeads = async () => {
-    try {
-      const response = await fetch('/api/leads')
-      if (response.ok) {
-        const data = await response.json()
-        setLeads(data.leads)
-      } else {
-        toast.error('Error al cargar los leads')
-      }
-    } catch (error) {
-      console.error('Error al obtener leads:', error)
-      toast.error('Error al cargar los leads')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Use the custom hook for leads
+  const {
+    leads,
+    totalLeads,
+    isLoading,
+    error,
+    refetch,
+    updateLead,
+    deleteLead,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useLeads(filters)
 
-  useEffect(() => {
-    fetchLeads()
-  }, [])
+  // Fetch users (kept separate for now, could be its own hook)
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const res = await fetch('/api/users')
+      if (!res.ok) throw new Error('Error al cargar usuarios')
+      const data = await res.json()
+      return (data.users || []).filter((u: User) => u.activo)
+    },
+    staleTime: 600000, // 10 minutes
+  })
+
+  // Converted leads fetch (simple implementation for now)
+  const { data: convertedLeads = [] } = useQuery<Lead[]>({
+    queryKey: ['leads', 'converted'],
+    queryFn: async () => {
+      const res = await fetch('/api/leads?converted=true&limit=100')
+      if (!res.ok) return []
+      const data = await res.json()
+      return data.leads || []
+    },
+    enabled: showConverted,
+  })
+
+  const activeFilterCount = (() => {
+    let count = 0
+    if (filters.search) count++
+    count += filters.quickFilters.length
+    if (filters.source !== 'all') count++
+    if (filters.producto !== 'all') count++
+    if (filters.owner !== 'all') count++
+    return count
+  })()
+
+  const hasActiveFilters = activeFilterCount > 0
 
   const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
-    try {
-      const response = await fetch(`/api/leads/${leadId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setLeads((prevLeads) =>
-          prevLeads.map((lead) => (lead.id === leadId ? data.lead : lead))
-        )
-        toast.success('Lead actualizado correctamente')
-      } else {
-        toast.error('Error al actualizar el lead')
+    if (updates.stage === 'ganado') {
+      const lead = leads.find((l) => l.id === leadId)
+      if (lead && lead.stage !== 'ganado') {
+        setConvertLead(lead)
+        return
       }
-    } catch (error) {
-      console.error('Error al actualizar lead:', error)
-      toast.error('Error al actualizar el lead')
     }
+    await updateLead({ id: leadId, updates })
   }
 
-  // Calcular estadísticas
-  const stats = {
-    total: leads.length,
-    ganados: leads.filter((lead) => lead.stage === 'ganado').length,
+  const handleDeleteLead = async (leadId: string) => {
+    await deleteLead(leadId)
   }
 
-  const conversionRate = stats.total > 0 ? ((stats.ganados / stats.total) * 100).toFixed(1) : '0'
+  const handleLeadConverted = (accountId: string) => {
+    setConvertLead(null)
+    router.push(`/admin/cuentas/${accountId}`)
+    refetch()
+  }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin" />
-      </div>
-    )
+  const handleQuickAdd = () => {
+    setIsNewLeadDialogOpen(true)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar - Solo visible en desktop */}
+    <div className="min-h-screen crm-surface flex">
       <CRMSidebar />
 
-      {/* Main Content */}
-      <div className="flex-1 md:ml-64">
-        {/* Header Material Design */}
-        <div className="bg-white sticky top-0 z-10 shadow-md border-b border-gray-200">
-          <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-gray-900 truncate">
-                  LEADS
-                </h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-2">
-                  Tablero Kanban para gestionar tus leads de ventas
+      <SidebarContent>
+        {/* ─── Sticky header ───────────────────────────── */}
+        <header className="crm-header sticky top-0 z-10 shrink-0">
+          <div className="px-3 sm:px-6 py-2.5 sm:py-4">
+            {/* Row 1: Title + Actions */}
+            <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-3">
+              <div className="min-w-0">
+                <h1 className="crm-title text-[16px] sm:text-[18px]">Leads</h1>
+                <p className="crm-meta crm-mono mt-0.5 text-[10px] sm:text-[11px]">
+                  {isLoading ? (
+                    <span className="crm-skeleton inline-block w-16 h-3" />
+                  ) : leads.length === totalLeads ? (
+                    `${totalLeads} leads`
+                  ) : (
+                    <>Mostrando {leads.length} de {totalLeads}</>
+                  )}
                 </p>
               </div>
-            <div className="flex gap-3 w-full sm:w-auto">
-              <Button 
-                onClick={() => setIsNewLeadDialogOpen(true)} 
-                size="default"
-                className="w-full sm:w-auto shrink-0 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-md px-4 py-2 font-medium"
-              >
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Nuevo Lead</span>
-                <span className="sm:hidden">Nuevo</span>
-              </Button>
-              <Button 
-                onClick={fetchLeads} 
-                variant="outline" 
-                size="default"
-                className="w-full sm:w-auto shrink-0 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md px-4 py-2 font-medium"
-              >
-                <RefreshCw className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Actualizar</span>
+              <div className="flex items-center gap-1">
+                {/* Converted toggle */}
+                <button
+                  onClick={() => setShowConverted(!showConverted)}
+                  className={cn(
+                    'flex items-center gap-1 h-8 px-2 rounded-md text-[11px] font-medium transition-colors',
+                    showConverted
+                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                      : 'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]'
+                  )}
+                  title="Ver leads convertidos"
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{showConverted ? 'Activos' : 'Convertidos'}</span>
+                </button>
+
+                {/* View mode toggle */}
+                <div className="flex items-center rounded-[var(--crm-radius-md)] border border-[var(--crm-border)] overflow-hidden" role="group" aria-label="Cambiar vista">
+                  <button
+                    onClick={() => setViewMode('kanban')}
+                    aria-label="Vista Kanban"
+                    aria-pressed={viewMode === 'kanban'}
+                    className={cn(
+                      'flex items-center justify-center h-8 w-8 transition-colors',
+                      viewMode === 'kanban'
+                        ? 'bg-[var(--crm-bg-active)] text-[var(--crm-text)]'
+                        : 'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]'
+                    )}
+                    title="Vista Kanban"
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    aria-label="Vista Lista"
+                    aria-pressed={viewMode === 'list'}
+                    className={cn(
+                      'flex items-center justify-center h-8 w-8 border-l border-[var(--crm-border)] transition-colors',
+                      viewMode === 'list'
+                        ? 'bg-[var(--crm-bg-active)] text-[var(--crm-text)]'
+                        : 'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]'
+                    )}
+                    title="Vista Lista"
+                  >
+                    <List className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <Button
+                  onClick={() => refetch()}
+                  variant="ghost"
+                  size="sm"
+                  disabled={isLoading}
+                  aria-label="Actualizar leads"
+                  className={cn(
+                    'h-8 w-8 p-0 rounded-md text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
+                    'crm-focus-ring transition-all',
+                    isLoading && 'animate-spin'
+                  )}
+                  title="Actualizar"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  onClick={() => setIsNewLeadDialogOpen(true)}
+                  size="sm"
+                  className="crm-btn-primary gap-1.5 crm-focus-ring"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Nuevo Lead</span>
+                  <span className="sm:hidden">Nuevo</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Row 2: KPI cards */}
+            {isLoading ? <KpiCardsSkeleton /> : <KpiCards leads={leads} />}
+          </div>
+        </header>
+
+        {/* ─── Main content ─────────────────────────────── */}
+        <div className="flex-1 flex flex-col px-3 sm:px-6 py-3 sm:py-4">
+          {/* Error state */}
+          {error && !isLoading && (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--crm-danger-light)]">
+                <AlertTriangle className="h-6 w-6 text-[var(--crm-danger)]" />
+              </div>
+              <div className="text-center max-w-sm">
+                <p className="crm-subtitle font-semibold text-[var(--crm-text)]">Error al cargar datos</p>
+                <p className="crm-body mt-1">No se pudieron cargar los leads.</p>
+              </div>
+              <Button onClick={() => refetch()} className="crm-btn-secondary gap-2 mt-2">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reintentar
               </Button>
             </div>
-          </div>
+          )}
 
-          {/* Estadísticas Material Design - Mejoradas */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden">
-              <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-3 px-3 pt-4 sm:pt-5">
-                <div className="bg-blue-100 rounded-full p-2.5 sm:p-3 mb-2">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                </div>
-                <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
-                  Total Leads
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
-                <div className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.total}</div>
-              </CardContent>
-            </Card>
+          {/* Empty state (no leads at all) */}
+          {!isLoading && !error && totalLeads === 0 && !showConverted && (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)]">
+                <Inbox className="h-6 w-6 text-[var(--crm-text-muted)]" />
+              </div>
+              <div className="text-center max-w-sm">
+                <p className="crm-subtitle font-semibold text-[var(--crm-text)]">Sin leads aún</p>
+                <p className="crm-body mt-1">Creá tu primer lead para empezar a gestionar tu pipeline.</p>
+              </div>
+              <Button onClick={() => setIsNewLeadDialogOpen(true)} className="crm-btn-primary gap-2 mt-2">
+                <Plus className="h-3.5 w-3.5" />
+                Crear primer lead
+              </Button>
+            </div>
+          )}
 
-            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden">
-              <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-3 px-3 pt-4 sm:pt-5">
-                <div className="bg-green-100 rounded-full p-2.5 sm:p-3 mb-2">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+          {/* Converted leads view */}
+          {showConverted && !isLoading && !error && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Archive className="h-4 w-4 text-emerald-600" />
+                <h2 className="text-[14px] font-semibold text-[var(--crm-text)]">Leads convertidos</h2>
+                <span className="text-[11px] crm-mono text-[var(--crm-text-muted)]">({convertedLeads.length})</span>
+              </div>
+              {convertedLeads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)]">
+                    <Archive className="h-5 w-5 text-[var(--crm-text-muted)]" />
+                  </div>
+                  <p className="text-[13px] text-[var(--crm-text-muted)]">No hay leads convertidos aún</p>
                 </div>
-                <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
-                  Ganados
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
-                <div className="text-2xl sm:text-3xl font-bold text-green-600">{stats.ganados}</div>
-              </CardContent>
-            </Card>
+              ) : (
+                <div className="space-y-2">
+                  {convertedLeads.map((lead) => (
+                    <div key={lead.id} className="bg-[var(--crm-bg-card)] border border-[var(--crm-border-light)] rounded-lg p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[var(--crm-text)] truncate">{lead.nombre}</p>
+                          <p className="text-[12px] text-[var(--crm-text-secondary)]">{lead.empresa}</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
+                          Convertido
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-[var(--crm-text-muted)]">
+                        <span>{lead.email}</span>
+                        <span>{lead.telefono}</span>
+                        {lead.convertedAt && (
+                          <span>Convertido: {new Date(lead.convertedAt).toLocaleDateString('es-AR')}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-            <Card className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden">
-              <CardHeader className="flex flex-col items-center justify-center space-y-0 pb-3 px-3 pt-4 sm:pt-5">
-                <div className="bg-purple-100 rounded-full p-2.5 sm:p-3 mb-2">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+          {/* Normal content */}
+          {!error && !showConverted && (
+            <>
+              {(totalLeads > 0 || hasActiveFilters || isLoading) && (
+                <KanbanTopBar
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  activeFilterCount={activeFilterCount}
+                  users={users}
+                />
+              )}
+
+              {/* No results with filters */}
+              {!isLoading && leads.length === 0 && hasActiveFilters ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)]">
+                    <Inbox className="h-6 w-6 text-[var(--crm-text-muted)]" />
+                  </div>
+                  <div className="text-center max-w-sm">
+                    <p className="crm-subtitle font-semibold text-[var(--crm-text)]">Sin resultados</p>
+                    <p className="crm-body mt-1">No se encontraron leads con los filtros actuales.</p>
+                  </div>
+                  <Button onClick={() => setFilters(DEFAULT_FILTERS)} className="crm-btn-secondary gap-2 mt-2">
+                    Limpiar filtros
+                  </Button>
                 </div>
-                <CardTitle className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
-                  Tasa Conversión
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 pb-4 sm:pb-5 flex items-center justify-center">
-                <div className="text-2xl sm:text-3xl font-bold text-purple-600">{conversionRate}%</div>
-              </CardContent>
-            </Card>
-          </div>
+              ) : viewMode === 'kanban' ? (
+                <KanbanBoard
+                  leads={leads}
+                  onUpdateLead={handleUpdateLead}
+                  onDeleteLead={handleDeleteLead}
+                  onQuickAdd={handleQuickAdd}
+                  density="comfortable"
+                  isLoading={isLoading}
+                />
+              ) : (
+                isLoading ? (
+                  <div className="space-y-2 mt-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] p-3 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="crm-skeleton h-2 w-2 rounded-full" />
+                          <div className="crm-skeleton h-4 w-32" />
+                          <div className="crm-skeleton h-4 w-12 rounded ml-auto" />
+                        </div>
+                        <div className="crm-skeleton h-2.5 w-24 ml-5" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <LeadsListView
+                    leads={leads}
+                    onUpdateLead={handleUpdateLead}
+                    onDeleteLead={handleDeleteLead}
+                  />
+                )
+              )}
+
+              {/* Load More Button */}
+              {!isLoading && !error && hasNextPage && !showConverted && (
+                <div className="py-4 flex justify-center w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="gap-2"
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Cargando más...
+                      </>
+                    ) : (
+                      <>
+                        Cargar más leads
+                        <span className="text-xs text-muted-foreground ml-1">
+                          ({leads.length} de {totalLeads})
+                        </span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
 
-        {/* Tablero Kanban */}
-        <div className="w-full px-4 sm:px-6 py-6 sm:py-8">
-          <KanbanBoard leads={leads} onUpdateLead={handleUpdateLead} />
-        </div>
-
-        {/* Dialog para nuevo lead */}
         <NewLeadDialog
           open={isNewLeadDialogOpen}
           onOpenChange={setIsNewLeadDialogOpen}
-          onLeadCreated={fetchLeads}
+          onLeadCreated={() => refetch()}
         />
-      </div>
+
+        <ConvertLeadModal
+          lead={convertLead}
+          open={!!convertLead}
+          onOpenChange={(open) => { if (!open) setConvertLead(null) }}
+          onConverted={handleLeadConverted}
+        />
+      </SidebarContent>
     </div>
   )
 }
-

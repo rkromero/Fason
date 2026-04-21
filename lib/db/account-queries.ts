@@ -1,0 +1,352 @@
+import pool, { generateId, withTransaction } from '../db'
+import { Account, Contact, Deal, DuplicateMatch } from '@/lib/types/account'
+import type { PoolClient } from 'pg'
+
+// ─── Account queries ─────────────────────────────────────────────
+
+const ACCOUNT_SELECT = `
+  a.id, a.nombre, a.empresa, a.cuit, a.email, a.telefono, a.website, a.industria, a.notas,
+  a.owner_id as "ownerId", u.nombre as "ownerName",
+  a.created_at as "createdAt", a.updated_at as "updatedAt"
+`
+
+function mapAccount(row: any): Account {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    empresa: row.empresa,
+    cuit: row.cuit || undefined,
+    email: row.email ?? '',
+    telefono: row.telefono ?? '',
+    website: row.website || undefined,
+    industria: row.industria || undefined,
+    notas: row.notas || undefined,
+    ownerId: row.ownerId || undefined,
+    ownerName: row.ownerName || undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+export async function getAllAccounts(page = 1, limit = 100): Promise<{ accounts: Account[]; total: number }> {
+  const offset = (page - 1) * limit
+  const [countRes, dataRes] = await Promise.all([
+    pool.query(`SELECT COUNT(*) as total FROM accounts`),
+    pool.query(
+      `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id ORDER BY a.created_at DESC LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    ),
+  ])
+  return {
+    accounts: dataRes.rows.map(mapAccount),
+    total: parseInt(countRes.rows[0].total, 10),
+  }
+}
+
+export async function getAccountById(id: string): Promise<Account | null> {
+  const result = await pool.query(
+    `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE a.id = $1`, [id]
+  )
+  return result.rows.length > 0 ? mapAccount(result.rows[0]) : null
+}
+
+export async function searchAccounts(query: string): Promise<Account[]> {
+  const result = await pool.query(
+    `SELECT ${ACCOUNT_SELECT} FROM accounts a LEFT JOIN users u ON a.owner_id = u.id
+     WHERE a.empresa ILIKE $1 OR a.nombre ILIKE $1 OR a.email ILIKE $1 OR a.cuit ILIKE $1
+     ORDER BY a.empresa ASC LIMIT 20`,
+    [`%${query}%`]
+  )
+  return result.rows.map(mapAccount)
+}
+
+// createAccount con UUID — retorna directamente sin SELECT extra
+export async function createAccount(data: {
+  nombre: string; empresa: string; cuit?: string; email?: string; telefono?: string;
+  website?: string; industria?: string; notas?: string; ownerId?: string
+}, client?: PoolClient): Promise<Account> {
+  const id = generateId('acc')
+  const now = new Date().toISOString()
+  const q = client || pool
+  await q.query(
+    `INSERT INTO accounts (id, nombre, empresa, cuit, email, telefono, website, industria, notas, owner_id, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)`,
+    [id, data.nombre, data.empresa, data.cuit || null, data.email || null, data.telefono || null,
+     data.website || null, data.industria || null, data.notas || null, data.ownerId || null, now]
+  )
+  return {
+    id, nombre: data.nombre, empresa: data.empresa, cuit: data.cuit,
+    email: data.email || '', telefono: data.telefono || '',
+    website: data.website, industria: data.industria, notas: data.notas,
+    ownerId: data.ownerId, createdAt: now, updatedAt: now,
+  }
+}
+
+// ─── Update account ─────────────────────────────────────────────
+
+export async function updateAccount(id: string, data: Partial<{
+  nombre: string; empresa: string; cuit: string; email: string; telefono: string;
+  website: string; industria: string; notas: string; ownerId: string
+}>): Promise<Account | null> {
+  const fields: string[] = []
+  const values: any[] = []
+  let idx = 1
+
+  if (data.nombre !== undefined) { fields.push(`nombre = $${idx++}`); values.push(data.nombre) }
+  if (data.empresa !== undefined) { fields.push(`empresa = $${idx++}`); values.push(data.empresa) }
+  if (data.cuit !== undefined) { fields.push(`cuit = $${idx++}`); values.push(data.cuit || null) }
+  if (data.email !== undefined) { fields.push(`email = $${idx++}`); values.push(data.email || null) }
+  if (data.telefono !== undefined) { fields.push(`telefono = $${idx++}`); values.push(data.telefono || null) }
+  if (data.website !== undefined) { fields.push(`website = $${idx++}`); values.push(data.website || null) }
+  if (data.industria !== undefined) { fields.push(`industria = $${idx++}`); values.push(data.industria || null) }
+  if (data.notas !== undefined) { fields.push(`notas = $${idx++}`); values.push(data.notas || null) }
+  if (data.ownerId !== undefined) { fields.push(`owner_id = $${idx++}`); values.push(data.ownerId || null) }
+
+  if (fields.length === 0) return getAccountById(id)
+
+  fields.push(`updated_at = $${idx++}`)
+  values.push(new Date().toISOString())
+  values.push(id)
+
+  await pool.query(`UPDATE accounts SET ${fields.join(', ')} WHERE id = $${idx}`, values)
+  return getAccountById(id)
+}
+
+// ─── Duplicate detection (optimized: single UNION ALL query) ─────
+
+export async function findDuplicateAccounts(data: {
+  cuit?: string; email?: string; telefono?: string; empresa?: string; nombre?: string
+}): Promise<DuplicateMatch[]> {
+  const unions: string[] = []
+  const params: any[] = []
+  let idx = 1
+
+  if (data.cuit && data.cuit.trim()) {
+    const normalized = data.cuit.replace(/[-.\s]/g, '')
+    unions.push(`SELECT ${ACCOUNT_SELECT}, 'cuit' as match_type, 'high' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE REPLACE(REPLACE(REPLACE(a.cuit, '-', ''), '.', ''), ' ', '') = $${idx}`)
+    params.push(normalized)
+    idx++
+  }
+
+  if (data.email && data.email.trim()) {
+    unions.push(`SELECT ${ACCOUNT_SELECT}, 'email' as match_type, 'high' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE LOWER(a.email) = LOWER($${idx})`)
+    params.push(data.email.trim())
+    idx++
+  }
+
+  if (data.telefono && data.telefono.trim()) {
+    const digits = data.telefono.replace(/\D/g, '')
+    if (digits.length >= 6) {
+      unions.push(`SELECT ${ACCOUNT_SELECT}, 'telefono' as match_type, 'high' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE REGEXP_REPLACE(a.telefono, '[^0-9]', '', 'g') LIKE '%' || $${idx} || '%'`)
+      params.push(digits)
+      idx++
+    }
+  }
+
+  if (data.empresa && data.empresa.trim().length >= 3) {
+    const normalized = `%${data.empresa.toLowerCase().trim()}%`
+    unions.push(`SELECT ${ACCOUNT_SELECT}, 'nombre' as match_type, 'medium' as confidence FROM accounts a LEFT JOIN users u ON a.owner_id = u.id WHERE LOWER(a.empresa) LIKE $${idx} OR LOWER(a.nombre) LIKE $${idx} LIMIT 5`)
+    params.push(normalized)
+    idx++
+  }
+
+  if (unions.length === 0) return []
+
+  const result = await pool.query(unions.join(' UNION ALL '), params)
+
+  const seenIds = new Set<string>()
+  const matches: DuplicateMatch[] = []
+  for (const row of result.rows) {
+    if (!seenIds.has(row.id)) {
+      seenIds.add(row.id)
+      matches.push({
+        account: mapAccount(row),
+        matchType: row.match_type,
+        confidence: row.confidence,
+      })
+    }
+  }
+  return matches
+}
+
+// ─── Contact queries ─────────────────────────────────────────────
+
+function mapContact(row: any): Contact {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    email: row.email ?? '',
+    telefono: row.telefono ?? '',
+    cargo: row.cargo || undefined,
+    accountId: row.accountId,
+    accountName: row.accountName || undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+export async function getContactsByAccountId(accountId: string): Promise<Contact[]> {
+  const result = await pool.query(
+    `SELECT c.id, c.nombre, c.email, c.telefono, c.cargo,
+       c.account_id as "accountId", a.empresa as "accountName",
+       c.created_at as "createdAt", c.updated_at as "updatedAt"
+     FROM contacts c LEFT JOIN accounts a ON c.account_id = a.id
+     WHERE c.account_id = $1 ORDER BY c.created_at DESC`,
+    [accountId]
+  )
+  return result.rows.map(mapContact)
+}
+
+// createContact con UUID — retorna directamente sin SELECT extra
+export async function createContact(data: {
+  nombre: string; email?: string; telefono?: string; cargo?: string; accountId: string
+}, client?: PoolClient): Promise<{ id: string }> {
+  const id = generateId('con')
+  const now = new Date().toISOString()
+  const q = client || pool
+  await q.query(
+    `INSERT INTO contacts (id, nombre, email, telefono, cargo, account_id, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $7)`,
+    [id, data.nombre, data.email || null, data.telefono || null, data.cargo || null, data.accountId, now]
+  )
+  return { id }
+}
+
+// ─── Deal queries ────────────────────────────────────────────────
+
+function mapDeal(row: any): Deal {
+  return {
+    id: row.id,
+    titulo: row.titulo,
+    monto: parseFloat(row.monto) || 0,
+    moneda: row.moneda || 'ARS',
+    status: row.status,
+    accountId: row.accountId,
+    accountName: row.accountName || undefined,
+    contactId: row.contactId || undefined,
+    originLeadId: row.originLeadId || undefined,
+    ownerId: row.ownerId || undefined,
+    ownerName: row.ownerName || undefined,
+    closedAt: row.closedAt || undefined,
+    notas: row.notas || undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+const DEAL_SELECT = `
+  d.id, d.titulo, d.monto, d.moneda, d.status,
+  d.account_id as "accountId", a.empresa as "accountName",
+  d.contact_id as "contactId",
+  d.origin_lead_id as "originLeadId",
+  d.owner_id as "ownerId", u.nombre as "ownerName",
+  d.closed_at as "closedAt", d.notas,
+  d.created_at as "createdAt", d.updated_at as "updatedAt"
+`
+
+export async function getDealsByAccountId(accountId: string): Promise<Deal[]> {
+  const result = await pool.query(
+    `SELECT ${DEAL_SELECT}
+     FROM deals d
+     LEFT JOIN accounts a ON d.account_id = a.id
+     LEFT JOIN users u ON d.owner_id = u.id
+     WHERE d.account_id = $1 ORDER BY d.created_at DESC`,
+    [accountId]
+  )
+  return result.rows.map(mapDeal)
+}
+
+// createDeal con UUID — retorna directamente sin SELECT extra
+export async function createDeal(data: {
+  titulo: string; monto: number; moneda?: string; status: string;
+  accountId: string; contactId?: string; originLeadId?: string; ownerId?: string; notas?: string
+}, client?: PoolClient): Promise<Deal> {
+  const id = generateId('deal')
+  const now = new Date().toISOString()
+  const closedAt = data.status === 'won' || data.status === 'lost' ? now : null
+  const q = client || pool
+  await q.query(
+    `INSERT INTO deals (id, titulo, monto, moneda, status, account_id, contact_id, origin_lead_id, owner_id, closed_at, notas, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)`,
+    [id, data.titulo, data.monto, data.moneda || 'ARS', data.status, data.accountId,
+     data.contactId || null, data.originLeadId || null, data.ownerId || null,
+     closedAt, data.notas || null, now]
+  )
+  return {
+    id, titulo: data.titulo, monto: data.monto, moneda: data.moneda || 'ARS',
+    status: data.status as Deal['status'], accountId: data.accountId,
+    contactId: data.contactId, originLeadId: data.originLeadId,
+    ownerId: data.ownerId, closedAt: closedAt || undefined,
+    notas: data.notas, createdAt: now, updatedAt: now,
+  }
+}
+
+// ─── Convert lead (transactional) ────────────────────────────────
+
+export async function convertLead(leadId: string, accountId: string, contactId: string, client?: PoolClient): Promise<void> {
+  const now = new Date().toISOString()
+  const q = client || pool
+  await q.query(
+    `UPDATE leads SET status = 'converted', converted_at = $1, account_id = $2, contact_id = $3, stage = 'ganado', updated_at = $1 WHERE id = $4`,
+    [now, accountId, contactId, leadId]
+  )
+}
+
+// ─── Full transactional conversion ──────────────────────────────
+
+export async function convertLeadTransaction(data: {
+  leadId: string
+  existingAccountId?: string
+  accountData?: { nombre: string; empresa: string; cuit?: string; email?: string; telefono?: string; website?: string; industria?: string; notas?: string; ownerId?: string }
+  contactData: { nombre: string; email?: string; telefono?: string; cargo?: string }
+  dealData: { titulo: string; monto: number; moneda?: string; notas?: string }
+  leadOwnerId?: string
+}): Promise<{ accountId: string; contactId: string; dealId: string }> {
+  return withTransaction(async (client) => {
+    let accountId: string
+
+    if (data.existingAccountId) {
+      accountId = data.existingAccountId
+    } else if (data.accountData) {
+      const account = await createAccount(data.accountData, client)
+      accountId = account.id
+    } else {
+      throw new Error('Se requiere existingAccountId o accountData')
+    }
+
+    const contact = await createContact({
+      ...data.contactData,
+      accountId,
+    }, client)
+
+    const deal = await createDeal({
+      titulo: data.dealData.titulo,
+      monto: data.dealData.monto,
+      moneda: data.dealData.moneda || 'ARS',
+      status: 'won',
+      accountId,
+      contactId: contact.id,
+      originLeadId: data.leadId,
+      ownerId: data.leadOwnerId,
+      notas: data.dealData.notas,
+    }, client)
+
+    await convertLead(data.leadId, accountId, contact.id, client)
+
+    return { accountId, contactId: contact.id, dealId: deal.id }
+  })
+}
+
+// ─── Converted leads by account ──────────────────────────────────
+
+export async function getConvertedLeadsByAccountId(accountId: string): Promise<any[]> {
+  const result = await pool.query(
+    `SELECT id, nombre, empresa, email, telefono, producto, volumen,
+       inversion_estimada as "inversionEstimada",
+       created_at as "createdAt", converted_at as "convertedAt"
+     FROM leads WHERE account_id = $1 AND status = 'converted'
+     ORDER BY converted_at DESC`,
+    [accountId]
+  )
+  return result.rows
+}

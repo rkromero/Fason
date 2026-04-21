@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
+import { QueryProvider } from "@/components/providers/query-provider"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -119,6 +120,9 @@ export default function RootLayout({
     <>
       <html lang="es" suppressHydrationWarning>
         <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
           <link rel="icon" href="/favicon.ico" />
           <script
             type="application/ld+json"
@@ -139,8 +143,10 @@ export default function RootLayout({
               gtag('config', 'AW-10808684256');
             `}
           </Script>
-          {children}
-          <Toaster />
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
         </body>
       </html>
     </>

@@ -1,57 +1,137 @@
 "use client"
 
+import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '@/lib/utils'
+import type { StageConfig } from '@/lib/types/lead'
+import { Inbox, Plus } from 'lucide-react'
 
 interface KanbanColumnProps {
-  stage: {
-    id: string
-    label: string
-    color: string
-  }
+  stage: StageConfig
   leadCount: number
+  isOver?: boolean
+  onQuickAdd?: (stageId: string) => void
   children: React.ReactNode
+  isLoading?: boolean
 }
 
-export function KanbanColumn({ stage, leadCount, children }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: stage.id,
-  })
-
-  // Mapear colores Material Design
-  const getMaterialColor = (stageId: string) => {
-    const colorMap: Record<string, string> = {
-      'entrante': 'bg-blue-50 border-blue-200 text-blue-900',
-      'primer-llamado': 'bg-amber-50 border-amber-200 text-amber-900',
-      'seguimiento': 'bg-orange-50 border-orange-200 text-orange-900',
-      'negociacion': 'bg-purple-50 border-purple-200 text-purple-900',
-      'ganado': 'bg-green-50 border-green-200 text-green-900',
-      'perdido': 'bg-red-50 border-red-200 text-red-900',
-    }
-    return colorMap[stageId] || 'bg-gray-50 border-gray-200 text-gray-900'
-  }
+export const KanbanColumn = memo(function KanbanColumn({ stage, leadCount, isOver: isOverProp, onQuickAdd, children, isLoading }: KanbanColumnProps) {
+  const { setNodeRef, isOver: isDropOver } = useDroppable({ id: stage.id })
+  const isActive = isOverProp || isDropOver
+  const isEmpty = leadCount === 0
 
   return (
     <div
       ref={setNodeRef}
+      role="region"
+      aria-label={`Columna ${stage.label} — ${leadCount} leads`}
       className={cn(
-        'w-full h-full flex flex-col rounded-lg border transition-all duration-200 bg-white shadow-sm',
-        getMaterialColor(stage.id),
-        isOver && 'shadow-lg ring-2 ring-blue-400 ring-opacity-50'
+        'w-full h-full flex flex-col rounded-[var(--crm-radius-lg)] border bg-[var(--crm-bg-card)] overflow-hidden',
+        'transition-all duration-[var(--crm-transition)]',
+        isActive
+          ? 'border-[var(--crm-primary)] ring-2 ring-[var(--crm-primary)]/10 bg-[var(--crm-bg-subtle)]'
+          : 'border-[var(--crm-border)]'
       )}
     >
-      <div className="border-b bg-white/50 backdrop-blur-sm p-3 md:p-4 shrink-0">
+      {/* Color bar indicator (2-3px) */}
+      <div className={cn('h-[3px] w-full shrink-0', stage.bar)} />
+
+      {/* Sticky header */}
+      <div className="sticky top-0 z-[1] border-b border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] px-3 py-2.5 shrink-0">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium text-sm md:text-base text-gray-900 truncate">{stage.label}</h3>
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-gray-700 text-xs font-semibold shrink-0">
-            {leadCount}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="text-[13px] font-semibold text-[var(--crm-text)] truncate">
+              {stage.label}
+            </h3>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={cn(
+              'flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold crm-mono',
+              stage.badge
+            )}>
+              {leadCount}
+            </span>
+            {onQuickAdd && (
+              <button
+                onClick={() => onQuickAdd(stage.id)}
+                className={cn(
+                  'flex h-5 w-5 items-center justify-center rounded-[var(--crm-radius-sm)]',
+                  'text-[var(--crm-text-muted)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
+                  'transition-all duration-[var(--crm-transition-fast)] crm-focus-ring'
+                )}
+                aria-label={`Agregar lead a ${stage.label}`}
+                title="Agregar lead"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 bg-transparent">
-        <div className="flex flex-col gap-3 p-3">{children}</div>
+
+      {/* Content with independent scroll */}
+      <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 group relative">
+        {isLoading ? (
+          <div className="flex flex-col gap-3 p-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-[var(--crm-radius-md)] border border-[var(--crm-border-light)] bg-[var(--crm-bg-card)] p-3 space-y-2 opacity-60">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-[var(--crm-border)]" />
+                  <div className="h-3 w-3/4 bg-[var(--crm-border-light)] rounded" />
+                </div>
+                <div className="h-2.5 w-1/2 bg-[var(--crm-border-light)] rounded ml-4" />
+              </div>
+            ))}
+          </div>
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--crm-bg-subtle)] mb-3">
+              <Inbox className="h-5 w-5 text-[var(--crm-text-muted)]" />
+            </div>
+            <p className="crm-subtitle">Sin leads</p>
+            <p className="crm-meta mt-0.5">Arrastrá un lead aquí</p>
+            {onQuickAdd && (
+              <button
+                onClick={() => onQuickAdd(stage.id)}
+                className={cn(
+                  'mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--crm-radius-md)]',
+                  'text-[12px] font-medium text-[var(--crm-text-muted)]',
+                  'border border-dashed border-[var(--crm-border)]',
+                  'hover:border-[var(--crm-border-hover)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
+                  'transition-all duration-[var(--crm-transition)] crm-focus-ring'
+                )}
+              >
+                <Plus className="h-3 w-3" />
+                Agregar
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 p-2">
+            {children}
+            {onQuickAdd && (
+              <button
+                onClick={() => onQuickAdd(stage.id)}
+                className={cn(
+                  'flex items-center justify-center gap-1.5 w-full py-2 rounded-[var(--crm-radius-md)]',
+                  'text-[12px] font-medium text-[var(--crm-text-muted)]',
+                  'border border-dashed border-transparent',
+                  'hover:border-[var(--crm-border)] hover:text-[var(--crm-text-secondary)] hover:bg-[var(--crm-bg-hover)]',
+                  'transition-all duration-[var(--crm-transition)] crm-focus-ring',
+                  'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+                )}
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Drop indicator overlay */}
+        {isActive && !isEmpty && !isLoading && (
+          <div className="absolute inset-0 border-2 border-dashed border-[var(--crm-primary)]/30 bg-[var(--crm-primary)]/[0.02] pointer-events-none z-[2]" />
+        )}
       </div>
     </div>
   )
-}
-
+})
