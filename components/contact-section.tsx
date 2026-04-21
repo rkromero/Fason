@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertCircle } from "lucide-react"
+import { toast } from 'sonner'
 
 export function ContactSection() {
   const router = useRouter()
@@ -118,7 +119,7 @@ export function ContactSection() {
     } catch (error) {
       console.error("Error al enviar formulario:", error)
       const errorMessage = error instanceof Error ? error.message : "Error desconocido"
-      alert(`Hubo un error al enviar tu consulta: ${errorMessage}. Por favor, revisá la consola para más detalles e intentá nuevamente.`)
+      toast.error(`Error al enviar tu consulta: ${errorMessage}. Por favor intentá nuevamente.`)
       setIsSubmitting(false)
     }
   }

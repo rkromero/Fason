@@ -1,6 +1,6 @@
 "use client"
 
-import { Lead } from '@/lib/types/lead'
+import { Lead, LeadStage, STAGES } from '@/lib/types/lead'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Mail, Phone, Building2, DollarSign, Calendar, MessageSquare, Tag } from 'lucide-react'
+import { Mail, Phone, Building2, DollarSign, Calendar, MessageSquare, Tag, Pencil, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -19,13 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { LeadStage, STAGES, Lead } from '@/lib/types/lead'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Pencil, Save, X } from 'lucide-react'
+import { formatWhatsAppUrl } from '@/lib/utils'
 
 interface LeadDetailsDialogProps {
   lead: Lead
@@ -139,39 +138,12 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
   }
 
   const handleWhatsAppClick = () => {
-    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, +, y otros caracteres)
-    let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '')
-    
-    // Remover cualquier carácter que no sea número
-    cleanPhone = cleanPhone.replace(/\D/g, '')
-    
-    // Si el número está vacío después de limpiar, mostrar error
-    if (!cleanPhone || cleanPhone.length < 8) {
-      alert('Número de teléfono inválido')
+    const url = formatWhatsAppUrl(lead.telefono)
+    if (!url) {
+      toast.error('Número de teléfono inválido')
       return
     }
-    
-    // Si empieza con 0, removerlo (código de país local)
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1)
-    }
-    
-    // Si no empieza con código de país, asumir Argentina (54)
-    // Verificar si ya tiene código de país (Argentina: 54, otros países tienen códigos de 1-3 dígitos)
-    if (!cleanPhone.startsWith('54') && !cleanPhone.match(/^[1-9]\d{1,2}/)) {
-      // Si tiene 10 dígitos o menos, asumir que es número argentino sin código de país
-      if (cleanPhone.length <= 10) {
-        cleanPhone = `54${cleanPhone}`
-      }
-    }
-    
-    // Validar que el número tenga al menos 10 dígitos (código de país + número)
-    if (cleanPhone.length < 10) {
-      alert('Número de teléfono inválido')
-      return
-    }
-    
-    window.open(`https://wa.me/${cleanPhone}`, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const getProductoLabel = (producto: string) => {
@@ -400,21 +372,17 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onUpdateLead }: Le
               )}
             </div>
             <div className="flex flex-wrap gap-2 mt-4 pl-6">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.location.href = `mailto:${lead.email}`}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Enviar Email
+              <Button size="sm" variant="outline" asChild>
+                <a href={`mailto:${lead.email}`} aria-label={`Enviar email a ${lead.nombre}`}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Enviar Email
+                </a>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.location.href = `tel:${lead.telefono}`}
-              >
-                <Phone className="h-4 w-4 mr-2" />
-                Llamar
+              <Button size="sm" variant="outline" asChild>
+                <a href={`tel:${lead.telefono}`} aria-label={`Llamar a ${lead.nombre}`}>
+                  <Phone className="h-4 w-4 mr-2" />
+                  Llamar
+                </a>
               </Button>
               <Button
                 size="sm"

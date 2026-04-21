@@ -50,22 +50,13 @@ export function KanbanBoard({ leads, onUpdateLead }: KanbanBoardProps) {
     const { active, over } = event
     setActiveLead(null)
 
-    if (!over) {
-      console.log('No over target in handleDragEnd')
-      return
-    }
+    if (!over) return
 
     const leadId = active.id as string
     const newStage = over.id as LeadStage
 
-    console.log('Dropping lead:', leadId, 'to stage:', newStage)
-
-    // Verificar que el stage sea válido
     const isValidStage = STAGES.some((stage) => stage.id === newStage)
-    if (!isValidStage) {
-      console.log('Invalid stage:', newStage)
-      return
-    }
+    if (!isValidStage) return
 
     onUpdateLead(leadId, { stage: newStage })
   }

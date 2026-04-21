@@ -82,7 +82,7 @@ export function CRMSidebar() {
       {/* Footer */}
       <div className="px-4 py-4 border-t border-gray-200">
         <p className="text-xs text-gray-500 text-center">
-          © 2024 CRM
+          © 2025 CDA Fason
         </p>
       </div>
     </aside>

@@ -12,15 +12,17 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Mail, Phone, Building2, DollarSign, MoreVertical, MessageCircle, GripVertical } from 'lucide-react'
+import { Mail, Phone, Building2, DollarSign, MoreVertical, GripVertical } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
-import { useState, useRef, useEffect } from 'react'
+import { cn, formatWhatsAppUrl } from '@/lib/utils'
+import { useState, useRef } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { toast } from 'sonner'
 import { LeadDetailsDialog } from './lead-details-dialog'
 
 interface LeadCardProps {
@@ -31,11 +33,10 @@ interface LeadCardProps {
 
 export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useIsMobile()
   const hasMovedRef = useRef(false)
   const clickStartTime = useRef<number | null>(null)
   const clickStartPos = useRef<{ x: number; y: number } | null>(null)
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const {
     attributes,
     listeners,
@@ -45,32 +46,6 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
     isDragging: isSortableDragging,
   } = useSortable({ id: lead.id })
 
-  // Detectar si es mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => {
-      window.removeEventListener('resize', checkMobile)
-      // Limpiar timeout al desmontar
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  // Detectar cuando se inicia un drag para cancelar el click
-  useEffect(() => {
-    if (isSortableDragging || isDragging) {
-      // Si se inicia un drag, cancelar cualquier click pendiente
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current)
-        clickTimeoutRef.current = null
-      }
-    }
-  }, [isSortableDragging, isDragging])
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -195,39 +170,12 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    // Limpiar el número de teléfono (quitar espacios, guiones, paréntesis, +, y otros caracteres)
-    let cleanPhone = lead.telefono.replace(/[\s\-\(\)\+\.]/g, '')
-    
-    // Remover cualquier carácter que no sea número
-    cleanPhone = cleanPhone.replace(/\D/g, '')
-    
-    // Si el número está vacío después de limpiar, mostrar error
-    if (!cleanPhone || cleanPhone.length < 8) {
-      alert('Número de teléfono inválido')
+    const url = formatWhatsAppUrl(lead.telefono)
+    if (!url) {
+      toast.error('Número de teléfono inválido')
       return
     }
-    
-    // Si empieza con 0, removerlo (código de país local)
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1)
-    }
-    
-    // Si no empieza con código de país, asumir Argentina (54)
-    // Verificar si ya tiene código de país (Argentina: 54, otros países tienen códigos de 1-3 dígitos)
-    if (!cleanPhone.startsWith('54') && !cleanPhone.match(/^[1-9]\d{1,2}/)) {
-      // Si tiene 10 dígitos o menos, asumir que es número argentino sin código de país
-      if (cleanPhone.length <= 10) {
-        cleanPhone = `54${cleanPhone}`
-      }
-    }
-    
-    // Validar que el número tenga al menos 10 dígitos (código de país + número)
-    if (cleanPhone.length < 10) {
-      alert('Número de teléfono inválido')
-      return
-    }
-    
-    window.open(`https://wa.me/${cleanPhone}`, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -348,6 +296,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
             <a
               href={`mailto:${lead.email}`}
               onClick={(e) => e.stopPropagation()}
+              aria-label={`Enviar email a ${lead.nombre}`}
               className="flex items-center gap-1 hover:text-blue-600 transition-colors touch-manipulation text-gray-600 hover:bg-blue-50 rounded px-1.5 py-0.5"
             >
               <Mail className="h-3 w-3 shrink-0" />
@@ -356,6 +305,7 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
             <a
               href={`tel:${lead.telefono}`}
               onClick={(e) => e.stopPropagation()}
+              aria-label={`Llamar a ${lead.nombre}`}
               className="flex items-center gap-1 hover:text-green-600 transition-colors touch-manipulation text-gray-600 hover:bg-green-50 rounded px-1.5 py-0.5"
             >
               <Phone className="h-3 w-3 shrink-0" />
@@ -363,8 +313,8 @@ export function LeadCard({ lead, isDragging, onUpdateLead }: LeadCardProps) {
             </a>
             <button
               onClick={handleWhatsAppClick}
+              aria-label={`Abrir WhatsApp de ${lead.nombre}`}
               className="flex items-center gap-1 hover:text-[#25D366] transition-colors touch-manipulation text-gray-600 hover:bg-green-50 rounded px-1.5 py-0.5"
-              title="Abrir WhatsApp"
             >
               <svg
                 className="h-3 w-3 shrink-0"
