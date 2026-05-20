@@ -4,7 +4,7 @@ export type DensityMode = 'compact' | 'comfortable'
 
 export type LeadPriority = 'A' | 'B' | 'C'
 
-export type LeadSource = 'web' | 'referido' | 'redes' | 'llamada' | 'email' | 'otro'
+export type LeadSource = 'web' | 'referido' | 'redes' | 'llamada' | 'email' | 'otro' | 'crm'
 
 // ─── Tasks ──────────────────────────────────────────────────────
 export type TaskType = 'llamada' | 'email' | 'whatsapp' | 'reunion' | 'seguimiento' | 'otro'

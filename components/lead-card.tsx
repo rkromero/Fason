@@ -186,9 +186,7 @@ export const LeadCard = memo(function LeadCard({ lead, isDragging, onUpdateLead,
             {!isMobile && (
               <div
                 data-drag-handle
-                role="button"
                 aria-label={`Mover lead ${lead.nombre}`}
-                tabIndex={0}
                 className="cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-opacity -ml-1"
                 {...attributes}
                 {...listeners}

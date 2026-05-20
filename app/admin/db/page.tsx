@@ -8,8 +8,17 @@ import { toast } from 'sonner'
 import { CRMSidebar } from '@/components/crm-sidebar'
 import { SidebarContent } from '@/components/sidebar-layout'
 
+interface DbStatus {
+  connected: boolean
+  tableExists?: boolean
+  leadCount?: number
+  timestamp?: string
+  error?: string
+  [key: string]: unknown
+}
+
 export default function DatabaseAdminPage() {
-  const [status, setStatus] = useState<Record<string, unknown> | null>(null)
+  const [status, setStatus] = useState<DbStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(false)
 

@@ -12,7 +12,6 @@ function getJwtSecret(): Uint8Array {
   }
   return new TextEncoder().encode(secret)
 }
-const JWT_SECRET = getJwtSecret()
 const COOKIE_NAME = 'fason-session'
 const SESSION_DURATION = 60 * 60 * 24 * 7 // 7 days in seconds
 
@@ -28,14 +27,14 @@ export async function createSession(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(`${SESSION_DURATION}s`)
     .setIssuedAt()
-    .sign(JWT_SECRET)
+    .sign(getJwtSecret())
 
   return token
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecret())
     return {
       userId: payload.userId as string,
       email: payload.email as string,
