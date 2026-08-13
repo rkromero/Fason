@@ -50,6 +50,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Campos exceden el largo máximo' }, { status: 400 })
     }
 
+    // Reenviar el lead al CRM central de ALIPRO (inbox unificado). Best effort:
+    // si el CRM no responde, el email y el lead local siguen su curso normal.
+    const crmIntakeUrl =
+      process.env.CRM_INTAKE_URL ||
+      'https://mimibot-production-1c38.up.railway.app/api/leads/intake'
+    try {
+      await fetch(crmIntakeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre,
+          empresa,
+          email,
+          telefono,
+          producto,
+          marca,
+          volumen,
+          envasado,
+          mensaje,
+          inversionEstimada,
+          origen: 'landing-cda',
+        }),
+        signal: AbortSignal.timeout(8000),
+      })
+    } catch (crmError) {
+      console.error('No se pudo reenviar el lead al CRM de ALIPRO:', crmError)
+    }
+
     // Sanitizar todos los valores para prevenir XSS en el HTML del email
     const safe = {
       nombre: escapeHtml(nombre),
